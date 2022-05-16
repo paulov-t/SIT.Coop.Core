@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
-    <AssemblyName>SIT.Coop.Core</AssemblyName>
+    <AssemblyName>SIT.Z.Coop.Core</AssemblyName>
     <Description>My first plugin</Description>
     <Version>1.0.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -13,6 +13,7 @@
     <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="5.*" />
     <PackageReference Include="BepInEx.PluginInfoProps" Version="1.*" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="UnityEngine.Modules" Version="2019.4.34" IncludeAssets="compile" />
   </ItemGroup>
   
@@ -22,13 +23,28 @@
   
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>F:\EmuTarkov\Clients\Client.2\EscapeFromTarkov_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>..\Tarkov.References\Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="bsg.componentace.compression.libs.zlib">
+      <HintPath>..\Tarkov.References\bsg.componentace.compression.libs.zlib.dll</HintPath>
     </Reference>
     <Reference Include="Comfort">
-      <HintPath>F:\EmuTarkov\Clients\Client.2\EscapeFromTarkov_Data\Managed\Comfort.dll</HintPath>
+      <HintPath>..\Tarkov.References\Comfort.dll</HintPath>
     </Reference>
     <Reference Include="FilesChecker">
-      <HintPath>F:\EmuTarkov\Clients\Client.2\EscapeFromTarkov_Data\Managed\FilesChecker.dll</HintPath>
+      <HintPath>..\Tarkov.References\FilesChecker.dll</HintPath>
     </Reference>
+    <Reference Include="Sirenix.Serialization">
+      <HintPath>..\Tarkov.References\Sirenix.Serialization.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Folder Include="LocalGame\" />
+    <Folder Include="Matchmaker\MatchmakerGroup\" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\SIT.Tarkov.Core\SIT.A.Tarkov.Core.csproj" />
   </ItemGroup>
 </Project>

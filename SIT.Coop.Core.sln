@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32126.317
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SIT.Z.Coop.Core", "SIT.Z.Coop.Core.csproj", "{2F6A6B33-FA27-4CC5-A112-B52C90CD9C79}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SIT.A.Tarkov.Core", "..\SIT.Tarkov.Core\SIT.A.Tarkov.Core.csproj", "{7FF140E4-A8EB-462D-B5A4-98898231EA2A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2F6A6B33-FA27-4CC5-A112-B52C90CD9C79}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2F6A6B33-FA27-4CC5-A112-B52C90CD9C79}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2F6A6B33-FA27-4CC5-A112-B52C90CD9C79}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2F6A6B33-FA27-4CC5-A112-B52C90CD9C79}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7FF140E4-A8EB-462D-B5A4-98898231EA2A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7FF140E4-A8EB-462D-B5A4-98898231EA2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7FF140E4-A8EB-462D-B5A4-98898231EA2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7FF140E4-A8EB-462D-B5A4-98898231EA2A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B4CA65E0-8CF4-483B-99A6-DBD0B8FE3831}
+	EndGlobalSection
+EndGlobal
