@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.32126.317
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SIT.Z.Coop.Core", "SIT.Z.Coop.Core.csproj", "{2F6A6B33-FA27-4CC5-A112-B52C90CD9C79}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SIT.Coop.Core", "SIT.Coop.Core.csproj", "{2F6A6B33-FA27-4CC5-A112-B52C90CD9C79}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SIT.A.Tarkov.Core", "..\SIT.Tarkov.Core\SIT.A.Tarkov.Core.csproj", "{7FF140E4-A8EB-462D-B5A4-98898231EA2A}"
 EndProject

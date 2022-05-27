@@ -18,7 +18,7 @@ using HarmonyLib;
 
 namespace SIT.Coop.Core.Matchmaker
 {
-    public class MatchmakerAcceptScreenShow : ModulePatch
+    public class MatchmakerAcceptScreenShowPatch : ModulePatch
     {
 		[Serializable]
 		private class ServerStatus
@@ -43,7 +43,7 @@ namespace SIT.Coop.Core.Matchmaker
 
             var methodName = "Show";
 
-            return GetThisType().GetMethod(methodName, privateFlags);
+            return GetThisType().GetMethods(privateFlags).First(x=>x.Name == methodName);
 
         }
 
@@ -164,22 +164,39 @@ namespace SIT.Coop.Core.Matchmaker
         public static async void PeriodicUpdate()
         {
             await Task.Delay(1000);
-            if(MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance != null)
+            if (MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance != null)
             {
-                Logger.LogInfo("PeriodicUpdate");
+                //Logger.LogInfo("PeriodicUpdate");
+
+                //while (MatchmakerAcceptPatches.Grouping != null && !MatchmakerAcceptPatches.Grouping.Disposed)
+                //{
+                //    await Task.Delay(1000);
+                //    //await DoPeriodicUpdateAndSearches();
+
+                //    MatchmakerAcceptPatches.Grouping = PrivateValueAccessor.GetPrivateFieldValue(
+                //                               GetThisType(),
+                //                               MatchmakerAcceptPatches.GroupingPropertyName,
+                //                               MatchmakerAcceptPatches.MatchMakerAcceptScreenIntance) as Grouping;
+                //}
+
+                //string json = Web.WebCallHelper.GetJson("/client/match/group/getInvites");
+                //if (!string.IsNullOrEmpty(json))
+                //{
+                //    object gClass = JsonConvert.DeserializeObject<object>(json);
+                //    var from = Tarkov.Core.PatchConstants.GetFieldOrPropertyFromInstance<string>(gClass, "From");
+                //    if (gClass != null && !string.IsNullOrEmpty(from))
+                //    {
+                //        Logger.LogInfo("Invite Popup!");
+                //        //MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance
+                //        //    .GetType()
+                //        //    .GetMethod("method_8", privateFlags)
+                //        //    .Invoke(MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance, new object[] { from });
+                //        //this.InvitePopup(gClass);
+                //    }
+                //}
+
+                GetMatchStatus(() => { }, () => { });
             }
-
-            //while (MatchmakerAcceptPatches.Grouping != null && !MatchmakerAcceptPatches.Grouping.Disposed)
-            //{
-            //    await Task.Delay(1000);
-            //    //await DoPeriodicUpdateAndSearches();
-
-            //    MatchmakerAcceptPatches.Grouping = PrivateValueAccessor.GetPrivateFieldValue(
-            //                               GetThisType(),
-            //                               MatchmakerAcceptPatches.GroupingPropertyName,
-            //                               MatchmakerAcceptPatches.MatchMakerAcceptScreenIntance) as Grouping;
-            //}
-            GetMatchStatus(() => { }, () => { });
             PeriodicUpdate();
         }
 
@@ -239,11 +256,15 @@ namespace SIT.Coop.Core.Matchmaker
 
         private static void GetMatchStatus(Action onLoading, Action onNothing)
         {
-            Logger.LogInfo("GetMatchStatus");
 
-            if (MatchmakerAcceptPatches.Grouping != null && MatchmakerAcceptPatches.GetGroupPlayers().Count > 0 && !MatchmakerAcceptPatches.IsGroupOwner())
+            if (MatchmakerAcceptPatches.Grouping != null 
+                && MatchmakerAcceptPatches.GetGroupPlayers().Count > 0 
+                && !MatchmakerAcceptPatches.IsGroupOwner()
+                && !string.IsNullOrEmpty(MatchmakerAcceptPatches.GetGroupId())
+                )
             {
-                //string text = Web.WebCallHelper.PostJson("/client/match/group/server/status", true, JsonConvert.SerializeObject(MatchmakerAcceptPatches.Grouping.GroupId));
+                Logger.LogInfo("GetMatchStatus");
+                string text = Web.WebCallHelper.PostJson("/client/match/group/server/status", true, JsonConvert.SerializeObject(MatchmakerAcceptPatches.GetGroupId()));
                 //if (!string.IsNullOrEmpty(text))
                 //{
                 //    Debug.LogError("GetMatchStatus[1] ::" + text.Length);

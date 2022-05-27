@@ -2,11 +2,12 @@
 
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
-    <AssemblyName>SIT.Z.Coop.Core</AssemblyName>
+    <AssemblyName>SIT.Coop.Core</AssemblyName>
     <Description>My first plugin</Description>
     <Version>1.0.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
+    <RootNamespace>SIT.Coop.Core</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -40,7 +41,6 @@
   </ItemGroup>
   
   <ItemGroup>
-    <Folder Include="LocalGame\" />
     <Folder Include="Matchmaker\MatchmakerGroup\" />
   </ItemGroup>
   
