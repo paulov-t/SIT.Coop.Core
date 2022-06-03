@@ -1,4 +1,6 @@
-﻿using SIT.Tarkov.Core;
+﻿using Comfort.Common;
+using EFT;
+using SIT.Tarkov.Core;
 using SIT.Z.Coop.Core.Web;
 using System;
 using System.Collections.Generic;
@@ -6,11 +8,15 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using static SIT.Coop.Core.LocalGame.LocalGamePatches;
 
 namespace SIT.Coop.Core.LocalGame
 {
     internal class LocalGamePlayerSpawn : ModulePatch
     {
+        private static GameWorld gameWorld = null;
+        private static CoopGameComponent coopGameComponent = null;
+
         protected override MethodBase GetTargetMethod()
         {
             //foreach(var ty in SIT.Tarkov.Core.PatchConstants.EftTypes.Where(x => x.Name.StartsWith("BaseLocalGame")))
@@ -39,7 +45,7 @@ namespace SIT.Coop.Core.LocalGame
             , Task __result
             )
         {
-            Logger.LogInfo($"LocalGamePlayerSpawn:PatchPrefix");
+            //Logger.LogInfo($"LocalGamePlayerSpawn:PatchPrefix");
         }
 
         [PatchPostfix]
@@ -48,7 +54,7 @@ namespace SIT.Coop.Core.LocalGame
             , Task<EFT.LocalPlayer> __result
             )
         {
-            Logger.LogInfo($"LocalGamePlayerSpawn:PatchPostfix");
+            //Logger.LogInfo($"LocalGamePlayerSpawn:PatchPostfix");
 
             await __result.ContinueWith((x) =>
             {
@@ -60,9 +66,17 @@ namespace SIT.Coop.Core.LocalGame
                 {
                     LocalGamePatches.MyPlayer = p;
                 }
+
+                //gameWorld = Singleton<GameWorld>.Instance;
+                //if (gameWorld != null)
+                //{
+                    coopGameComponent = Plugin.Instance.GetOrAddComponent<CoopGameComponent>();
+                    //gameWorld.GetType().DontDestroyOnLoad(coopGameComponent);
+                //}
             });
 
-            Logger.LogInfo($"LocalGamePlayerSpawn:PatchPostfix:Complete");
+
+            
         }
 
      

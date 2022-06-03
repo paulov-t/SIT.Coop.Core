@@ -1,11 +1,11 @@
 ﻿using BepInEx.Logging;
 using Newtonsoft.Json;
 using SIT.Coop.Core.Matchmaker;
-using SIT.Coop.Core.Web;
 using SIT.Tarkov.Core;
 using SIT.Z.Coop.Core.Web;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -87,7 +87,7 @@ namespace SIT.Coop.Core.LocalGame
                 if (MatchmakerAcceptPatches.MatchingType == EMatchmakerType.GroupLeader)
                 {
                     string myExternalAddress = ServerCommunication.GetMyExternalAddress();
-                    WebCallHelper.PostJson("/client/match/group/server/start", true, JsonConvert.SerializeObject(myExternalAddress));
+                    new Request().PostJson("/client/match/group/server/start", JsonConvert.SerializeObject(myExternalAddress));
                     await Task.Delay(500);
                 }
                 else
@@ -116,14 +116,89 @@ namespace SIT.Coop.Core.LocalGame
 
         private static void ServerCommunication_OnDataReceived(byte[] buffer)
         {
-            Logger.LogInfo($"LocalGameStartingPatch:PatchPostfix:OnDataReceived");
+            //Logger.LogInfo($"LocalGameStartingPatch:OnDataReceived");
+            if (buffer.Length == 0)
+                return;
+
+            using (StreamReader streamReader = new StreamReader(new MemoryStream(buffer)))
+            {
+                {
+                    try
+                    {
+                        string @string = streamReader.ReadToEnd();
+                        //Logger.LogInfo(@string);    
+
+                        if (@string.Length == 4 && @string == "Ping")
+                        {
+                            //this.DataEnqueued.Enqueue(Encoding.ASCII.GetBytes("Pong"));
+                            ServerCommunication.SendDataDownWebSocket("Pong");
+                            return;
+                        }
+                        else
+                        {
+                            Task.Run(() =>
+                            {
+                                if (@string.Length > 0 && @string[0] == '{')
+                                {
+                                    var dictionary = JsonConvert.DeserializeObject<Dictionary<string, object>>(@string);
+                                    if (dictionary != null && dictionary.Count > 0 && dictionary.ContainsKey("accountId"))
+                                    {
+                                        if (dictionary.ContainsKey("m") && !dictionary.ContainsKey("method"))
+                                            dictionary.Add("method", dictionary["m"]);
+
+                                        var method = dictionary["method"].ToString();
+
+                                        LocalGamePatches.ClientQueuedActions.TryAdd(method, new Queue<Dictionary<string, object>>());
+                                        LocalGamePatches.ClientQueuedActions[method].Enqueue(dictionary);
+                                    }
+                                }
+                                if (@string.IndexOf('[') == 0 && @string.EndsWith("]"))
+                                {
+                                    var deserialized = JsonConvert.DeserializeObject<object[]>(@string);
+                                    foreach (var item in deserialized)
+                                    {
+                                        if (item.ToString() == "Ping")
+                                        {
+                                            ServerCommunication.SendDataDownWebSocket("Pong");
+                                        }
+                                        else
+                                        {
+                                            var dictionary = JsonConvert.DeserializeObject<Dictionary<string, object>>(item.ToString());
+                                            if (dictionary != null && dictionary.Count > 0 && dictionary.ContainsKey("accountId"))
+                                            {
+                                                if (dictionary.ContainsKey("m") && !dictionary.ContainsKey("method"))
+                                                {
+                                                    dictionary.Add("method", dictionary["m"]);
+                                                }
+
+                                                if (!dictionary.ContainsKey("method"))
+                                                    continue;
+
+                                                var method = dictionary["method"].ToString();
+
+                                                //this.ClientQueuedActions.TryAdd(method, new Queue<Dictionary<string, object>>());
+                                                //this.ClientQueuedActions[method].Enqueue(dictionary);
+                                            }
+                                        }
+                                    }
+                                    deserialized = null;
+                                }
+                            });
+                            //}
+                        }
+                    }
+                    catch (Exception ex2)
+                    {
+                        return;
+                    }
+                }
+            }
         }
 
         private static void SetMatchmakerStatus(string status, float? progress = null)
         {
             if (LocalGamePatches.LocalGameInstance == null)
                 return;
-
 
             var method = PatchConstants.GetAllMethodsForType(LocalGamePatches.LocalGameInstance.GetType()).First(x => x.Name == "SetMatchmakerStatus");
             if(method != null)

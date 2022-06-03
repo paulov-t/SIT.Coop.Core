@@ -7,34 +7,33 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SIT.Z.Coop.Core.Player
+namespace SIT.Coop.Core.Player
 {
-    internal class PlayerOnGesturePatch : ModulePatch
+    internal class PlayerOnHealPatch : ModulePatch
     {
         protected override MethodBase GetTargetMethod()
         {
             var t = SIT.Tarkov.Core.PatchConstants.EftTypes.FirstOrDefault(x => x.FullName == "EFT.Player");
             if (t == null)
-                Logger.LogInfo($"OnGesturePatch:Type is NULL");
+                Logger.LogInfo($"PlayerOnHealPatch:Type is NULL");
 
             var method = PatchConstants.GetAllMethodsForType(t)
-                .FirstOrDefault(x => x.GetParameters().Length >= 1 && x.GetParameters()[0].Name.Contains("gesture"));
+                .FirstOrDefault(x => x.Name == "Heal");
 
-            Logger.LogInfo($"OnGesturePatch:{t.Name}:{method.Name}");
+            Logger.LogInfo($"PlayerOnHealPatch:{t.Name}:{method.Name}");
             return method;
         }
 
         [PatchPostfix]
         public static void PatchPostfix(
-            object __instance,
-            object gesture)
+            EFT.Player __instance,
+            EBodyPart bodyPart, float value)
         {
-            Logger.LogInfo("OnGesturePatch.PatchPostfix");
             Dictionary<string, object> dictionary = new Dictionary<string, object>();
-            dictionary.Add("gesture", gesture);
-            dictionary.Add("m", "Gesture");
+            dictionary.Add("bodyPart", bodyPart);
+            dictionary.Add("value", value);
+            dictionary.Add("m", "Heal");
             ServerCommunication.PostLocalPlayerData(__instance, dictionary);
-            Logger.LogInfo("OnGesturePatch.PatchPostfix:Sent");
 
         }
     }

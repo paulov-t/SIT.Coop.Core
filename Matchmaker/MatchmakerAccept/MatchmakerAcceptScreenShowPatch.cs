@@ -12,7 +12,6 @@ using UnityEngine;
 //using Grouping = GClass2434;
 using EFT.UI;
 using UnityEngine.UIElements;
-using SIT.Tarkov.Coop.Core;
 using EFT;
 using HarmonyLib;
 
@@ -91,8 +90,11 @@ namespace SIT.Coop.Core.Matchmaker
 			ref DefaultUIButton ____groupPreview
             )
         {
+
             Logger.LogInfo("MatchmakerAcceptScreenShow.PatchPostfix");
             Logger.LogInfo(___profile_0.AccountId);
+
+            MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance = __instance;
 
             ____acceptButton.gameObject.SetActive(true);
             ____playersRaidReadyPanel.ShowGameObject();
@@ -110,22 +112,23 @@ namespace SIT.Coop.Core.Matchmaker
             //    Logger.LogInfo("MatchmakerAcceptScreenShow.PatchPostfix.Grouping object created " + obj.GetType().FullName);
             //}
 
-            var typeOfInstance = __instance.GetType();
-            Logger.LogInfo(typeOfInstance.Name);
+            //var typeOfInstance = __instance.GetType();
+            //Logger.LogInfo(typeOfInstance.Name);
 
-            Logger.LogInfo(SIT.Tarkov.Core.PatchConstants.GroupingType.Name);
+            //Logger.LogInfo(SIT.Tarkov.Core.PatchConstants.GroupingType.Name);
 
-            var fields = typeOfInstance.GetFields(BindingFlags.Instance | BindingFlags.NonPublic);
-            foreach (FieldInfo property in fields)
-            {
-                if (property.Name.ToLower().Contains(SIT.Tarkov.Core.PatchConstants.GroupingType.Name.ToLower()))
-                {
-                    MatchmakerAcceptPatches.Grouping = property.GetValue(MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance);
-                    Logger.LogInfo($"MatchmakerAcceptScreenShow.PatchPostfix:Found {property.Name} and assigned to Grouping");
+            ////var fields = typeOfInstance.GetFields(BindingFlags.Instance | BindingFlags.NonPublic);
+            ////foreach (FieldInfo property in fields)
+            ////{
+            ////    if (property.Name.ToLower().Contains(SIT.Tarkov.Core.PatchConstants.GroupingType.Name.ToLower()))
+            ////    {
+            //var property = Tarkov.Core.PatchConstants.GetAllFieldsForObject(typeOfInstance).Single(x => x.Name.ToLower().Contains(SIT.Tarkov.Core.PatchConstants.GroupingType.Name.ToLower()));
+            //MatchmakerAcceptPatches.Grouping = property.GetValue(MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance);
+            //Logger.LogInfo($"MatchmakerAcceptScreenShow.PatchPostfix:Found {property.Name} and assigned to Grouping");
 
-                    break;
-                }
-            }
+            //        break;
+            //    }
+            //}
 
             //    }
             //    else
@@ -179,21 +182,21 @@ namespace SIT.Coop.Core.Matchmaker
                 //                               MatchmakerAcceptPatches.MatchMakerAcceptScreenIntance) as Grouping;
                 //}
 
-                //string json = Web.WebCallHelper.GetJson("/client/match/group/getInvites");
-                //if (!string.IsNullOrEmpty(json))
-                //{
-                //    object gClass = JsonConvert.DeserializeObject<object>(json);
-                //    var from = Tarkov.Core.PatchConstants.GetFieldOrPropertyFromInstance<string>(gClass, "From");
-                //    if (gClass != null && !string.IsNullOrEmpty(from))
-                //    {
-                //        Logger.LogInfo("Invite Popup!");
-                //        //MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance
-                //        //    .GetType()
-                //        //    .GetMethod("method_8", privateFlags)
-                //        //    .Invoke(MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance, new object[] { from });
-                //        //this.InvitePopup(gClass);
-                //    }
-                //}
+                string json = new Request().GetJson("/client/match/group/getInvites");
+                if (!string.IsNullOrEmpty(json))
+                {
+                    //    object gClass = JsonConvert.DeserializeObject<object>(json);
+                    //    var from = Tarkov.Core.PatchConstants.GetFieldOrPropertyFromInstance<string>(gClass, "From");
+                    //    if (gClass != null && !string.IsNullOrEmpty(from))
+                    //    {
+                    //        Logger.LogInfo("Invite Popup!");
+                    //        //MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance
+                    //        //    .GetType()
+                    //        //    .GetMethod("method_8", privateFlags)
+                    //        //    .Invoke(MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance, new object[] { from });
+                    //        //this.InvitePopup(gClass);
+                    //    }
+                }
 
                 GetMatchStatus(() => { }, () => { });
             }
@@ -257,26 +260,27 @@ namespace SIT.Coop.Core.Matchmaker
         private static void GetMatchStatus(Action onLoading, Action onNothing)
         {
 
-            if (MatchmakerAcceptPatches.Grouping != null 
+            if (MatchmakerAcceptPatches.Grouping != null
+                && MatchmakerAcceptPatches.GetGroupPlayers() != null
                 && MatchmakerAcceptPatches.GetGroupPlayers().Count > 0 
                 && !MatchmakerAcceptPatches.IsGroupOwner()
                 && !string.IsNullOrEmpty(MatchmakerAcceptPatches.GetGroupId())
                 )
             {
                 Logger.LogInfo("GetMatchStatus");
-                string text = Web.WebCallHelper.PostJson("/client/match/group/server/status", true, JsonConvert.SerializeObject(MatchmakerAcceptPatches.GetGroupId()));
-                //if (!string.IsNullOrEmpty(text))
-                //{
-                //    Debug.LogError("GetMatchStatus[1] ::" + text.Length);
-                //    ServerStatus serverStatus = JsonConvert.DeserializeObject<ServerStatus>(text);
-                //    Debug.LogError("GetMatchStatus[2] ::" + serverStatus.status);
-                //    if (serverStatus.status == "LOADING" || serverStatus.status == "INGAME")
-                //    {
-                //        Debug.LogError("GetMatchStatus[3] :: Starting up");
-                //        MatchmakerAcceptPatches.MatchingType = EMatchingType.GroupPlayer;
-                //        onLoading?.Invoke();
-                //    }
-                //}
+                string text = new Request().PostJson("/client/match/group/server/status", JsonConvert.SerializeObject(MatchmakerAcceptPatches.GetGroupId()));
+                if (!string.IsNullOrEmpty(text))
+                {
+                    Debug.LogError("GetMatchStatus[1] ::" + text.Length);
+                    ServerStatus serverStatus = JsonConvert.DeserializeObject<ServerStatus>(text);
+                    Debug.LogError("GetMatchStatus[2] ::" + serverStatus.status);
+                    if (serverStatus.status == "LOADING" || serverStatus.status == "INGAME")
+                    {
+                        Debug.LogError("GetMatchStatus[3] :: Starting up");
+                        MatchmakerAcceptPatches.MatchingType = EMatchmakerType.GroupPlayer;
+                        onLoading?.Invoke();
+                    }
+                }
             }
             onNothing?.Invoke();
         }

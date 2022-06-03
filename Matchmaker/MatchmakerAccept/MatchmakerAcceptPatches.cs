@@ -13,6 +13,7 @@ using System.Reflection;
 using Newtonsoft.Json;
 using SIT.Z.Coop.Core.Matchmaker.MatchmakerAccept;
 using SIT.Z.Coop.Core.Matchmaker.MatchmakerAccept.Grouping;
+using SIT.Tarkov.Core;
 
 namespace SIT.Coop.Core.Matchmaker
 {
@@ -27,20 +28,48 @@ namespace SIT.Coop.Core.Matchmaker
     {
         public static EFT.UI.Matchmaker.MatchMakerAcceptScreen MatchMakerAcceptScreenInstance { get; set; }
         //public static string GroupId { get; set; }
-        public static EMatchmakerType MatchingType { get; set; }
+        public static EMatchmakerType MatchingType { get; set; } = EMatchmakerType.Single;
         public static bool ForcedMatchingType { get; set; }
         //public static ScreenController ScreenController { get; set; }
         public static Profile Profile { get; set; }
 
+        private static object _grouping;
         /// <summary>
         /// The Grouping object - you must reflect to get its properties and methods
         /// </summary>
-        public static object Grouping { get; set; }
+        public static object Grouping { get { return GetGrouping(); } set { _grouping = value; } }
+
+        public static object GetGrouping()
+        {
+            if (MatchMakerAcceptScreenInstance == null)
+                return null;
+
+            var typeOfInstance = MatchMakerAcceptScreenInstance.GetType();
+            //PatchConstants.Logger.LogInfo(typeOfInstance.Name);
+            //PatchConstants.Logger.LogInfo(SIT.Tarkov.Core.PatchConstants.GroupingType.Name);
+
+            //foreach(var f in Tarkov.Core.PatchConstants.GetAllFieldsForObject(MatchMakerAcceptScreenInstance))
+            //{
+            //    PatchConstants.Logger.LogInfo($"{f}");
+            //}
+
+            //foreach (var p in Tarkov.Core.PatchConstants.GetAllPropertiesForObject(MatchMakerAcceptScreenInstance))
+            //{
+            //    PatchConstants.Logger.LogInfo($"{p}");
+            //}
+
+            var property = Tarkov.Core.PatchConstants.GetAllFieldsForObject(MatchMakerAcceptScreenInstance)
+                .Single(x => x.Name.ToLower().Contains(SIT.Tarkov.Core.PatchConstants.GroupingType.Name.ToLower()));
+            _grouping = property.GetValue(MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance);
+            //PatchConstants.Logger.LogInfo($"MatchmakerAcceptScreenShow.PatchPostfix:Found {property.Name} and assigned to Grouping");
+            return _grouping;
+        }
 
         public static IList<object> GetGroupPlayers()
         {
             if (Grouping == null)
-                return new List<object>();
+                return null;
+                //return new List<object>();
 
             var properties = Grouping.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public);
             foreach (PropertyInfo property in properties)

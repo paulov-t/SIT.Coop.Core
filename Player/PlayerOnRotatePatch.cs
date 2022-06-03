@@ -6,10 +6,11 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace SIT.Coop.Core.Player
 {
-    internal class PlayerOnInventoryOpenedPatch : ModulePatch
+    public class PlayerOnRotatePatch : ModulePatch
     {
         /// <summary>
 		/// public override void Say(EPhraseTrigger @event, bool demand = false, float delay = 0f, ETagStatus mask = (ETagStatus)0, int probability = 100, bool aggressive = false)
@@ -20,13 +21,13 @@ namespace SIT.Coop.Core.Player
         {
             var t = SIT.Tarkov.Core.PatchConstants.EftTypes.FirstOrDefault(x => x.FullName == "EFT.Player");
             if (t == null)
-                Logger.LogInfo($"PlayerOnInventoryOpened:Type is NULL");
+                Logger.LogInfo($"PlayerOnRotatePatch:Type is NULL");
 
             var method = PatchConstants.GetAllMethodsForType(t)
-                .FirstOrDefault(x => x.Name == "SetInventoryOpened"
+                .FirstOrDefault(x => x.Name == "Rotate"
                 );
 
-            Logger.LogInfo($"PlayerOnInventoryOpenedPatch:{t.Name}:{method.Name}");
+            Logger.LogInfo($"PlayerOnRotatePatch:{t.Name}:{method.Name}");
             return method;
         }
 
@@ -38,16 +39,24 @@ namespace SIT.Coop.Core.Player
 
         [PatchPostfix]
         public static void PatchPostfix(
-            object __instance,
-            bool opened)
+            EFT.Player __instance,
+            Vector2 deltaRotation
+            , bool ignoreClamp)
         {
-            //Logger.LogInfo("PlayerOnInventoryOpenedPatch.PatchPostfix");
+
+            //Logger.LogInfo("PlayerOnSayPatch.PatchPostfix");
             Dictionary<string, object> dictionary = new Dictionary<string, object>();
-            dictionary.Add("opened", opened);
-            dictionary.Add("m", "InventoryOpened");
-            ServerCommunication.PostLocalPlayerData(__instance, dictionary);
-            //Logger.LogInfo("PlayerOnInventoryOpenedPatch.PatchPostfix:Sent");
+            dictionary.Add("arX", __instance.MovementContext.Rotation.x);
+            dictionary.Add("arY", __instance.MovementContext.Rotation.y);
+            dictionary.Add("m", "Rotate");
+            Task.Run(delegate
+            {
+                ServerCommunication.PostLocalPlayerData(__instance, dictionary);
+                //MatchMakerAcceptScreen.ServerCommunicationCoopImplementation.PostLocalPlayerData(this, dictionary);
+            });
+            //Logger.LogInfo("PlayerOnSayPatch.PatchPostfix:Sent");
 
         }
     }
+    
 }

@@ -45,12 +45,12 @@ namespace SIT.Coop.Core.Player
             object __instance,
             object @event)
         {
-            Logger.LogInfo("PlayerOnSayPatch.PatchPostfix");
+            //Logger.LogInfo("PlayerOnSayPatch.PatchPostfix");
             Dictionary<string, object> dictionary = new Dictionary<string, object>();
             dictionary.Add("event", @event);
             dictionary.Add("m", "Say");
             ServerCommunication.PostLocalPlayerData(__instance, dictionary);
-            Logger.LogInfo("PlayerOnSayPatch.PatchPostfix:Sent");
+            //Logger.LogInfo("PlayerOnSayPatch.PatchPostfix:Sent");
 
         }
     }

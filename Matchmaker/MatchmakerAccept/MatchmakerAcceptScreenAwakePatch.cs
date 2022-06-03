@@ -12,7 +12,6 @@ using UnityEngine;
 //using Grouping = GClass2434;
 using EFT.UI;
 using UnityEngine.UIElements;
-using SIT.Tarkov.Coop.Core;
 using EFT;
 using HarmonyLib;
 using UnityEngine.Events;

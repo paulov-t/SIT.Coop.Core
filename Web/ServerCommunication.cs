@@ -1,5 +1,4 @@
-﻿using SIT.Coop.Core.Web;
-using SIT.Tarkov.Core;
+﻿using SIT.Tarkov.Core;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -28,9 +27,11 @@ namespace SIT.Z.Coop.Core.Web
 		private static int udpServerPort = 7070;
 
 		private static string backendUrlIp { get; set; }
-		//private static string backendUrlPort { get; set; }
+        public static bool CommunicationError { get; private set; }
 
-		public delegate void OnDataReceivedHandler(byte[] buffer);
+        //private static string backendUrlPort { get; set; }
+
+        public delegate void OnDataReceivedHandler(byte[] buffer);
 		public static event OnDataReceivedHandler OnDataReceived;
 
 		public static void CloseAllUdpClients()
@@ -45,7 +46,7 @@ namespace SIT.Z.Coop.Core.Web
 
 		public static UdpClient GetUdpClient(bool reliable = false)
 		{
-			if (MatchmakerAcceptPatches.IsSinglePlayer)
+			if (ServerCommunication.CommunicationError || MatchmakerAcceptPatches.IsSinglePlayer)
 				return null;
 
 			if (!reliable && udpClients.Any())
@@ -59,12 +60,16 @@ namespace SIT.Z.Coop.Core.Web
 			dataDict.Add("groupId", MatchmakerAcceptPatches.GetGroupId());
 			if (string.IsNullOrEmpty(backendUrlIp))
 			{
-				backendUrlIp = PatchConstants.GetBackendUrl();
+				var backendUrl = PatchConstants.GetBackendUrl();
+				if (backendUrl.Contains("localhost"))
+					backendUrlIp = "127.0.0.1";
+				else
+					backendUrlIp = backendUrl.Split(':')[1].Replace("//", "");
 				//backendUrlPort = array[2];
-				UnityEngine.Debug.LogError("Setting ServerCommunicationCoopImplementation backendurlip::" + backendUrlIp);
+				PatchConstants.Logger.LogInfo("Setting ServerCommunicationCoopImplementation backendurlip::" + backendUrlIp);
 			}
-			var returnedIp = WebCallHelper.PostJson("/client/match/group/server/getGameServerIp", data: dataDict.ToJson());
-			UnityEngine.Debug.LogError("GetUdpClient::Game Server IP is " + returnedIp);
+			var returnedIp = new Request().PostJson("/client/match/group/server/getGameServerIp", data: dataDict.ToJson());
+			PatchConstants.Logger.LogInfo("GetUdpClient::Game Server IP is " + returnedIp);
 			if (!string.IsNullOrEmpty(returnedIp))
 			{
 				if (IPAddress.TryParse(returnedIp, out _))
@@ -73,13 +78,13 @@ namespace SIT.Z.Coop.Core.Web
 				}
 			}
 
-
 			UdpClient udpClient = new UdpClient(backendUrlIp, (reliable ? udpServerPort + 1 : udpServerPort));
-			udpClient.Client.SendBufferSize = 2048;
-			udpClient.Client.ReceiveBufferSize = 2048;
+			udpClient.Client.SendBufferSize = 50;
+			udpClient.Client.ReceiveBufferSize = 50;
 			udpClient.Client.ReceiveTimeout = 50;
 			udpClient.Client.SendTimeout = 50;
 			udpClient.Send(Encoding.UTF8.GetBytes("Connect="), Encoding.UTF8.GetBytes("Connect=").Length);
+			//udpClient.BeginSend(Encoding.UTF8.GetBytes("Connect="), Encoding.UTF8.GetBytes("Connect=").Length, (IAsyncResult ar) => { }, null);
 			udpClient.BeginReceive(ReceiveUdp, udpClient);
 
 			if (!udpClients.Contains(udpClient))
@@ -153,7 +158,7 @@ namespace SIT.Z.Coop.Core.Web
 
 		public static async Task SendDataDownWebSocket(object data, bool reliable = false)
 		{
-			if (MatchmakerAcceptPatches.IsSinglePlayer)
+			if (MatchmakerAcceptPatches.IsSinglePlayer || CommunicationError)
 				return;
 
 			int attemptCountdown = 30;
@@ -192,6 +197,7 @@ namespace SIT.Z.Coop.Core.Web
 			catch (Exception ex2)
 			{
 				LoggingCoopImplementation.QuickLog("SendDataDownWebSocket::Socket::" + ex2.ToString());
+				ServerCommunication.CommunicationError = true;
 			}
 			lockedWS = false;
 		}

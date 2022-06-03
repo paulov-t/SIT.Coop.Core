@@ -32,13 +32,13 @@ namespace SIT.Coop.Core.Player
 
         [PatchPostfix]
         public static void PatchPostfix(
-            object __instance
+            EFT.Player __instance
             , object damageInfo
             , object bodyPartType
             , float absorbed
             , object headSegment)
         {
-            Logger.LogInfo("PlayerOnDamagePatch.PatchPostfix");
+            //Logger.LogInfo("PlayerOnDamagePatch.PatchPostfix");
             Dictionary<string, object> dictionary = new Dictionary<string, object>();
 
             //dictionary.Add("armorDamage", damageInfo.ArmorDamage);

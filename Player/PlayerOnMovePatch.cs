@@ -45,10 +45,20 @@ namespace SIT.Coop.Core.Player
 
         [PatchPostfix]
         public static void PatchPostfix(
-            object __instance,
-            object direction)
+            EFT.Player __instance,
+            Vector2 direction)
         {
-            Logger.LogInfo("PlayerOnMovePatch.PatchPostfix");
+
+            Dictionary<string, object> dictionary = new Dictionary<string, object>();
+            dictionary.Add("nP", __instance.Transform.position);
+            dictionary.Add("dX", direction.x.ToString());
+            dictionary.Add("dY", direction.y.ToString());
+            dictionary.Add("m", "Move");
+            Task.Run(delegate
+            {
+               ServerCommunication.PostLocalPlayerData(__instance, dictionary);
+            });
+            //Logger.LogInfo("PlayerOnMovePatch.PatchPostfix");
             //if (MatchmakerAcceptPatches.IsServer && IsAI)
             //{
             //    StoredMoves.Add(direction);
