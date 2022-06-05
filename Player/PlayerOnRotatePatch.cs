@@ -43,9 +43,11 @@ namespace SIT.Coop.Core.Player
             Vector2 deltaRotation
             , bool ignoreClamp)
         {
+            if (deltaRotation.IsAnyComponentInfinity() || deltaRotation.IsAnyComponentNaN())
+                return;
 
-            //Logger.LogInfo("PlayerOnSayPatch.PatchPostfix");
-            Dictionary<string, object> dictionary = new Dictionary<string, object>();
+                //Logger.LogInfo("PlayerOnSayPatch.PatchPostfix");
+                Dictionary<string, object> dictionary = new Dictionary<string, object>();
             dictionary.Add("arX", __instance.MovementContext.Rotation.x);
             dictionary.Add("arY", __instance.MovementContext.Rotation.y);
             dictionary.Add("m", "Rotate");
@@ -56,6 +58,25 @@ namespace SIT.Coop.Core.Player
             });
             //Logger.LogInfo("PlayerOnSayPatch.PatchPostfix:Sent");
 
+        }
+
+        public static void RotateReplicated(EFT.Player player, Dictionary<string, object> dict)
+        {
+            try
+            {
+                Vector2 rot = Vector2.zero;
+                rot.x = float.Parse(dict["arX"].ToString());
+                rot.y = float.Parse(dict["arY"].ToString());
+
+                if (!rot.IsAnyComponentInfinity() && !rot.IsAnyComponentNaN())
+                {
+                    player.CurrentState.Rotate(rot, false);
+                }
+            }
+            catch(Exception ex)
+            {
+
+            }
         }
     }
     
