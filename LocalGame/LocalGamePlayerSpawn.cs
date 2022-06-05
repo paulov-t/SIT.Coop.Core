@@ -70,7 +70,11 @@ namespace SIT.Coop.Core.LocalGame
                 //gameWorld = Singleton<GameWorld>.Instance;
                 //if (gameWorld != null)
                 //{
-                    coopGameComponent = Plugin.Instance.GetOrAddComponent<CoopGameComponent>();
+                coopGameComponent = Plugin.Instance.GetOrAddComponent<CoopGameComponent>();
+                if(Matchmaker.MatchmakerAcceptPatches.IsClient)
+                {
+
+                }
                     //gameWorld.GetType().DontDestroyOnLoad(coopGameComponent);
                 //}
             });

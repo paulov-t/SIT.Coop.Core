@@ -5,6 +5,7 @@ using SIT.Coop.Core.Player;
 using SIT.Coop.Core.Player.Weapon;
 using SIT.Z.Coop.Core.Player;
 using System.Linq;
+using UnityEngine.SceneManagement;
 
 namespace SIT.Coop.Core
 {
@@ -51,6 +52,21 @@ namespace SIT.Coop.Core
 
             // Plugin startup logic
             Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
+
+            SceneManager.sceneLoaded += SceneManager_sceneLoaded;
+            SceneManager.sceneUnloaded += SceneManager_sceneUnloaded;
+
+        }
+
+        private void SceneManager_sceneUnloaded(Scene arg0)
+        {
+            //if (LocalGamePatches.LocalGameInstance == null)
+            //    new LocalGameStartBotSystemPatch().Disable();
+        }
+
+        private void SceneManager_sceneLoaded(Scene arg0, LoadSceneMode arg1)
+        {
+            //if(LocalGamePatches.LocalGameInstance != null)
         }
 
         private void EchoGameServer_OnLog(string text)

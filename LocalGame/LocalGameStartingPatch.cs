@@ -62,6 +62,7 @@ namespace SIT.Coop.Core.LocalGame
 
             Logger.LogInfo($"LocalGameStartingPatch:PatchPrefix");
             LocalGamePatches.LocalGameInstance = __instance;
+            new LocalGameStartBotSystemPatch().Enable();
 
             await StartAndConnectToServer(__instance);
         }
@@ -81,22 +82,27 @@ namespace SIT.Coop.Core.LocalGame
 
         public static async Task StartAndConnectToServer(object __instance)
         {
-            Logger.LogInfo("Matchmaker Matching type is " + Matchmaker.MatchmakerAcceptPatches.MatchingType);
+            Logger.LogInfo("LocalGameStartingPatch.StartAndConnectToServer : Matchmaker Matching type is " + Matchmaker.MatchmakerAcceptPatches.MatchingType);
             if (!(__instance.GetType().Name.Contains("HideoutGame")) && MatchmakerAcceptPatches.MatchingType != EMatchmakerType.Single)
             {
                 if (MatchmakerAcceptPatches.MatchingType == EMatchmakerType.GroupLeader)
                 {
-                    string myExternalAddress = ServerCommunication.GetMyExternalAddress();
-                    new Request().PostJson("/client/match/group/server/start", JsonConvert.SerializeObject(myExternalAddress));
+                    Logger.LogInfo("LocalGameStartingPatch.StartAndConnectToServer : Telling Central to Create Server");
+
+                    //string myExternalAddress = ServerCommunication.GetMyExternalAddress();
+                    new Request().PostJson("/client/match/group/server/start", JsonConvert.SerializeObject(""));
                     await Task.Delay(500);
                 }
                 else
                 {
-                    //MatchMakerAcceptScreen.ServerCommunicationCoopImplementation.PostJson(backendUrl + "/client/match/group/server/join", true, JsonConvert.SerializeObject(MatchMakerAcceptScreen.GroupId));
+                    Logger.LogInfo("LocalGameStartingPatch.StartAndConnectToServer : Joining Server");
+
+                    new Request().PostJson("/client/match/group/server/join", JsonConvert.SerializeObject(MatchmakerAcceptPatches.GetGroupId()));
                     await Task.Delay(500);
                 }
-                SetMatchmakerStatus("Attempting to connect to Game Host. . . (BepInEx)");
-                await Task.Delay(3000);
+                //SetMatchmakerStatus("Attempting to connect to Game Host. . . (BepInEx)");
+                //await Task.Delay(3000);
+
                 //LocalGame.SetMatchmakerStatus("Attempting to connect to Game Host. . .");
                 //if (this.ConnectToBackendWebSocket(backendUrl))
                 //{

@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using SIT.Coop.Core.Player;
 using SIT.Tarkov.Core;
 using System;
 using System.Collections.Concurrent;
@@ -12,9 +13,9 @@ namespace SIT.Coop.Core.LocalGame
 {
 	public class LocalGamePatches
 	{
-		public static object LocalGameInstance;
+		public static object LocalGameInstance { get; set; }
 
-		public static object MyPlayer;
+		public static object MyPlayer { get; set; }
 
 		public static EFT.Profile MyPlayerProfile
 		{
@@ -99,6 +100,9 @@ namespace SIT.Coop.Core.LocalGame
 								if (!dictionary.ContainsKey("accountId") || !dictionary.ContainsKey("m"))
 									continue;
 
+								if (MyPlayerProfile == null)
+									continue;
+
 								string accountid = dictionary["accountId"].ToString();
 								var player = GetPlayerByAccountId(accountid);
 								if (player == null)
@@ -110,35 +114,33 @@ namespace SIT.Coop.Core.LocalGame
 
 
 								var method = dictionary["m"].ToString();
-								if (accountid == MyPlayerProfile.AccountId && !MethodsToReplicateToMyPlayer.Contains(method))
+								if (
+									accountid == MyPlayerProfile.AccountId 
+									
+									&& !MethodsToReplicateToMyPlayer.Contains(method))
 									continue;
 
 
 								switch (method)
 								{
-									case "Move":
-										Vector2 zero = Vector2.zero;
-										Vector2 zero2 = Vector2.zero;
-										Quaternion item2 = Quaternion.identity;
-										Vector3 item3 = Vector3.zero;
-										if (dictionary.ContainsKey("dX") && dictionary.ContainsKey("dY"))
-										{
-											zero.x = float.Parse(dictionary["dX"].ToString());
-											zero.y = float.Parse(dictionary["dY"].ToString());
-										}
-										if (dictionary.ContainsKey("nP"))
-										{
-											item3 = JsonConvert.DeserializeObject<Vector3>(JsonConvert.SerializeObject(dictionary["nP"]));
-										}
-										//player.MoveReplicated(zero, item3);
-										//player.MovesReplicated(new List<Vector2>() { zero }, item3);
+									case "Damage":
+										PatchConstants.Logger.LogInfo("Damage");
 										break;
 									case "Dead":
 										PatchConstants.Logger.LogInfo("Dead");
 										break;
-									case "Damage":
-										PatchConstants.Logger.LogInfo("Damage");
+									case "Door":
+										PatchConstants.Logger.LogInfo("Dead");
 										break;
+									case "Move":
+                                        PlayerOnMovePatch.MoveReplicated(player, dictionary);
+                                        break;
+									case "Rotate":
+										//PatchConstants.Logger.LogInfo("Rotate");
+										break;
+
+
+
 								}
 							}
 						}
