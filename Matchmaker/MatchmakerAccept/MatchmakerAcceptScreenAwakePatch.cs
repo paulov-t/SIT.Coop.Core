@@ -81,9 +81,9 @@ namespace SIT.Coop.Core.Matchmaker
 
                 }
             }
-            var GotoNextScreenMethod = __instance.GetType().GetMethod("method_15", privateFlags);
-            var BackOutScreenMethod = __instance.GetType().GetMethod("method_20", privateFlags);
-            var UpdateListScreenMethod = __instance.GetType().GetMethod("method_22", privateFlags);
+            //var GotoNextScreenMethod = __instance.GetType().GetMethod("method_15", privateFlags);
+            //var BackOutScreenMethod = __instance.GetType().GetMethod("method_20", privateFlags);
+            //var UpdateListScreenMethod = __instance.GetType().GetMethod("method_22", privateFlags);
             ____acceptButton.OnClick.AddListener(() => { GoToRaid();});
             ____backButton.OnClick.AddListener(() => { BackOut(); });
 
@@ -97,21 +97,41 @@ namespace SIT.Coop.Core.Matchmaker
 
         public static void GoToRaid()
         {
-            MatchmakerAcceptPatches.MatchingType = EMatchmakerType.Single;
-            if (string.IsNullOrEmpty(MatchmakerAcceptPatches.GetGroupId()) && profile != null)
+            // SendInvitePatch sets the Host up
+            if (MatchmakerAcceptPatches.IsSinglePlayer)
             {
-                MatchmakerAcceptPatches.SetGroupId(profile.AccountId);
-            }
-            if (MatchmakerAcceptPatches.Grouping == null || string.IsNullOrEmpty(MatchmakerAcceptPatches.GetGroupId()))
-            {
-                Debug.LogError("No Network to Connect to. Running SP Only");
                 Tarkov.Core.PatchConstants.DisplayMessageNotification("Starting Singleplayer Game...");
-                return;
             }
-            //if (!MatchMakerAcceptScreen.ForcedMatchingType)
+            else if(MatchmakerAcceptPatches.IsServer)
+            {
+                Tarkov.Core.PatchConstants.DisplayMessageNotification("Starting Coop Game as Host");
+                if (profile != null)
+                    MatchmakerAcceptPatches.SetGroupId(profile.AccountId);
+            }
+            else if (MatchmakerAcceptPatches.IsClient)
+            {
+                Tarkov.Core.PatchConstants.DisplayMessageNotification("Starting Coop Game as Client");
+            }
+
+            //Logger.LogInfo("MatchmakerAcceptPatches.Grouping is " + MatchmakerAcceptPatches.Grouping);
+            //Logger.LogInfo("MatchmakerAcceptPatches.GroupId is " + MatchmakerAcceptPatches.GetGroupId());
+            //Logger.LogInfo("MatchmakerAcceptPatches.IsGroupOwner is " + MatchmakerAcceptPatches.IsGroupOwner());
+
+            //MatchmakerAcceptPatches.MatchingType = EMatchmakerType.Single;
+            //if (string.IsNullOrEmpty(MatchmakerAcceptPatches.GetGroupId()) && profile != null)
             //{
-            MatchmakerAcceptPatches.MatchingType = MatchmakerAcceptPatches.IsGroupOwner() ? EMatchmakerType.GroupLeader : EMatchmakerType.GroupPlayer;
-            Tarkov.Core.PatchConstants.DisplayMessageNotification("Starting Coop Game...");
+            //    MatchmakerAcceptPatches.SetGroupId(profile.AccountId);
+            //}
+            //if (MatchmakerAcceptPatches.Grouping == null || string.IsNullOrEmpty(MatchmakerAcceptPatches.GetGroupId()))
+            //{
+            //    Logger.LogInfo("No Network to Connect to. Running SP Only");
+            //    Tarkov.Core.PatchConstants.DisplayMessageNotification("Starting Singleplayer Game...");
+            //    return;
+            //}
+            ////if (!MatchMakerAcceptScreen.ForcedMatchingType)
+            ////{
+            //MatchmakerAcceptPatches.MatchingType = MatchmakerAcceptPatches.IsGroupOwner() ? EMatchmakerType.GroupLeader : EMatchmakerType.GroupPlayer;
+            //Tarkov.Core.PatchConstants.DisplayMessageNotification("Starting Coop Game...");
 
             //    MatchMakerAcceptScreen.GroupId = this.gclass2422_0.GroupId;
             //    MatchMakerAcceptScreen.Group = this.gclass2422_0;

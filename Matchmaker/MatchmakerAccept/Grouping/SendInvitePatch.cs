@@ -27,6 +27,7 @@ namespace SIT.Z.Coop.Core.Matchmaker.MatchmakerAccept.Grouping
         {
             Logger.LogInfo("SendInvitePatch.PatchPostfix");
             MatchmakerAcceptPatches.MatchingType = EMatchmakerType.GroupLeader;
+            MatchmakerAcceptPatches.HostExpectedNumberOfPlayers++;
         }
     }
 }
