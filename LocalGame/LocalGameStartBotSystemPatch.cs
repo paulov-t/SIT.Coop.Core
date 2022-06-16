@@ -75,22 +75,39 @@ namespace SIT.Coop.Core.LocalGame
             if(!Matchmaker.MatchmakerAcceptPatches.IsClient)
                 return true;
 
-            int timeBeforeDeploy = 5;
-            if (TimeBeforeDeployMethod == null)
-            {
-                Logger.LogInfo($"LocalGameStartBotSystemPatch:PatchPrefix:TimeBeforeDeployMethod is NULL");
-                return true;
-            }
+            return true;
 
-            TimeBeforeDeployMethod.Invoke(LocalGamePatches.LocalGameInstance, new object[] { timeBeforeDeploy });
+            //int timeBeforeDeploy = 5;
+            //if (TimeBeforeDeployMethod == null)
+            //{
+            //    Logger.LogInfo($"LocalGameStartBotSystemPatch:PatchPrefix:TimeBeforeDeployMethod is NULL");
+            //    return true;
+            //}
 
-            using (PatchConstants.StartWithToken("SessionRun"))
-            {
-                SetupExfilsBeforeStartMethod.Invoke(__instance, null);
-            }
+            //TimeBeforeDeployMethod.Invoke(LocalGamePatches.LocalGameInstance, new object[] { timeBeforeDeploy });
 
-            runCallback.Succeed();
-            return false;
+            //using (PatchConstants.StartWithToken("SessionRun"))
+            //{
+            //    SetupExfilsBeforeStartMethod.Invoke(__instance, null);
+            //}
+
+            //runCallback.Succeed();
+            ////return false;
+            //return true;
+        }
+
+        [PatchPostfix]
+        public static void PatchPostfix(
+           object __instance
+           , object botsSettings, object spawnSystem, Callback runCallback
+           
+           )
+        {
+            Logger.LogInfo($"LocalGameStartBotSystemPatch:PatchPostfix");
+            if (!Matchmaker.MatchmakerAcceptPatches.IsClient)
+                return;
+
+            
         }
     }
 }

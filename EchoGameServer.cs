@@ -29,7 +29,7 @@ namespace CoopTarkovGameServer
         }
     }
 
-    public class EchoGameServer
+    public class EchoGameServer : IDisposable
     {
         /// <summary>
         /// 
@@ -122,8 +122,8 @@ namespace CoopTarkovGameServer
                 );
                 //udpReceiver.Client.ReceiveBufferSize = 50;
                 //udpReceiver.Client.SendBufferSize = 300;
-                udpReceiver.Client.ReceiveBufferSize = 50;
-                udpReceiver.Client.SendBufferSize = 50;
+                udpReceiver.Client.ReceiveBufferSize = 300;
+                udpReceiver.Client.SendBufferSize = 300;
               
                 udpReceiver.BeginReceive(UdpReceive, udpReceiver);
          
@@ -444,10 +444,10 @@ namespace CoopTarkovGameServer
                                 //}
 
                                 // Always push Dead calls !
-                                if (method == "Dead" || method == "Damage")
-                                {
-                                    DataProcessInsurance.Enqueue(dictData);
-                                }
+                                //if (method == "Dead" || method == "Damage")
+                                //{
+                                //    DataProcessInsurance.Enqueue(dictData);
+                                //}
                             }
 
                             //string accountId = dictData["accountId"].ToString();
@@ -540,6 +540,22 @@ namespace CoopTarkovGameServer
             }
         }
 
+        //~EchoGameServer()
+        //{
+
+        //}
+
+        public void Dispose()
+        {
+            //    foreach (var c in udpReceivers)
+            //    {
+            //        c.Close();
+            //        c.Dispose();
+            //    }
+            //    udpReceivers.Clear();
+            //    Instances.Clear();
+            //    ResetServer();
+        }
     }
 
 }

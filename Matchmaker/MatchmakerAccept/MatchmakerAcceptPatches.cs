@@ -11,8 +11,8 @@ using Grouping = GClass2434;
 using SIT.Coop.Core.Matchmaker.MatchmakerAccept;
 using System.Reflection;
 using Newtonsoft.Json;
-using SIT.Z.Coop.Core.Matchmaker.MatchmakerAccept;
-using SIT.Z.Coop.Core.Matchmaker.MatchmakerAccept.Grouping;
+using SIT.Coop.Core.Matchmaker.MatchmakerAccept;
+using SIT.Coop.Core.Matchmaker.MatchmakerAccept.Grouping;
 using SIT.Tarkov.Core;
 
 namespace SIT.Coop.Core.Matchmaker
@@ -24,9 +24,36 @@ namespace SIT.Coop.Core.Matchmaker
         GroupLeader = 2
     }
 
+    [Serializable]
+    public class ServerStatus
+    {
+        [JsonProperty("ip")]
+        public string ip { get; set; }
+
+        [JsonProperty("status")]
+        public string status { get; set; }
+    }
+
     public static class MatchmakerAcceptPatches
     {
         public static EFT.UI.Matchmaker.MatchMakerAcceptScreen MatchMakerAcceptScreenInstance { get; set; }
+
+        public static object MatchmakerScreenController { get {
+                var screenControllerFieldInfo = MatchMakerAcceptScreenInstance.GetType().GetField("ScreenController", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
+                if (screenControllerFieldInfo != null)
+                {
+                    PatchConstants.Logger.LogInfo("MatchmakerAcceptPatches.Found ScreenController FieldInfo");
+                    var screenController = screenControllerFieldInfo.GetValue(MatchMakerAcceptScreenInstance);
+
+                    if(screenController != null)
+                        PatchConstants.Logger.LogInfo("MatchmakerAcceptPatches.Found ScreenController Instance");
+
+                    return screenController;
+
+                }
+                return null;
+            } 
+        }
         //public static string GroupId { get; set; }
         public static EMatchmakerType MatchingType { get; set; } = EMatchmakerType.Single;
         public static bool ForcedMatchingType { get; set; }
@@ -94,20 +121,67 @@ namespace SIT.Coop.Core.Matchmaker
             return Tarkov.Core.PatchConstants.GetFieldOrPropertyFromInstance<bool>(Grouping, "IsOwner", true);
         }
 
+        private static string groupId;
+
         public static string GetGroupId()
         {
-            if (Grouping == null)
-                return string.Empty;
+            return groupId;
+            //if (Grouping == null)
+            //    return string.Empty;
 
-            return Tarkov.Core.PatchConstants.GetFieldOrPropertyFromInstance<string>(Grouping, "GroupId", true);
+            //return Tarkov.Core.PatchConstants.GetFieldOrPropertyFromInstance<string>(Grouping, "GroupId", true);
         }
 
         public static void SetGroupId(string newId)
         {
-            if (Grouping == null)
-                return;
+            groupId = newId;
+            //if (Grouping == null)
+            //    return;
 
-            Grouping.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).First(x => x.Name == "GroupId").SetValue(Grouping, newId);
+            //Grouping.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance).First(x => x.Name == "GroupId").SetValue(Grouping, newId);
+        }
+
+        public static bool CheckForMatch()
+        {
+            if (MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance != null)
+            {
+                string json = new Request().GetJson("/client/match/group/getInvites");
+                if (!string.IsNullOrEmpty(json))
+                {
+                    var gClass = Activator.CreateInstance(MatchmakerAcceptPatches.InviteType);
+                    gClass = JsonConvert.DeserializeObject(json, MatchmakerAcceptPatches.InviteType);
+                    var from = Tarkov.Core.PatchConstants.GetFieldOrPropertyFromInstance<string>(gClass, "From");
+                    if (gClass != null && !string.IsNullOrEmpty(from))
+                    {
+                        PatchConstants.Logger.LogInfo($"Invite Popup! {gClass} {from}");
+
+                        PatchConstants.Logger.LogInfo("GetMatchStatus");
+                        string text = new Request().PostJson("/client/match/group/server/status", JsonConvert.SerializeObject(from));
+                        if (!string.IsNullOrEmpty(text))
+                        {
+                            //PatchConstants.Logger.LogInfo("GetMatchStatus[1] ::" + text.Length);
+                            ServerStatus serverStatus = JsonConvert.DeserializeObject<ServerStatus>(text);
+                            PatchConstants.Logger.LogInfo("GetMatchStatus[2] ::" + serverStatus.status);
+                            if (serverStatus.status == "LOADING" || serverStatus.status == "INGAME")
+                            {
+                                PatchConstants.Logger.LogInfo("GetMatchStatus[3] :: Starting up");
+                                //MatchmakerAcceptPatches.SetGroupId(from);
+                                MatchmakerAcceptPatches.MatchingType = EMatchmakerType.GroupPlayer;
+                                MatchmakerAcceptPatches.SetGroupId(from);
+                                PatchConstants.DisplayMessageNotification("Server is running and waiting for you to join...");
+                                return true;
+                                //MatchmakerAcceptPatches.MatchmakerScreenController.GetType().GetMethod("ShowNextScreen", BindingFlags.Public | BindingFlags.Instance).Invoke(MatchmakerAcceptPatches.MatchmakerScreenController, new object[] { from, EFT.UI.Matchmaker.EMatchingType.GroupPlayer });
+
+                            }
+                        }
+                    }
+                    else
+                    {
+                        //MatchmakerAcceptPatches.MatchingType = EMatchmakerType.Single;
+                    }
+                }
+            }
+            return false;
         }
 
         //public static string GroupingPropertyName { get { return "gclass2434_0"; } }
@@ -119,22 +193,28 @@ namespace SIT.Coop.Core.Matchmaker
         public static bool IsSinglePlayer => MatchingType == EMatchmakerType.Single;
         public static int HostExpectedNumberOfPlayers { get; set; }
 
+        public static Type InviteType { get; } = PatchConstants.EftTypes.Single(x =>
+            (PatchConstants.GetPropertyFromType(x, "Id") != null
+            || PatchConstants.GetFieldFromType(x, "Id") != null)
+            && (PatchConstants.GetPropertyFromType(x, "From") != null
+            || PatchConstants.GetFieldFromType(x, "From") != null)
+            && (PatchConstants.GetPropertyFromType(x, "To") != null
+            || PatchConstants.GetFieldFromType(x, "To") != null)
+            && (PatchConstants.GetPropertyFromType(x, "GroupId") != null
+            || PatchConstants.GetFieldFromType(x, "GroupId") != null)
+            && (PatchConstants.GetPropertyFromType(x, "FromProfile") != null
+            || PatchConstants.GetFieldFromType(x, "FromProfile") != null)
+        );
+
+        public static MethodInfo InvitePopupMethod { get; } = PatchConstants.GetAllMethodsForType(typeof(EFT.UI.Matchmaker.MatchMakerAcceptScreen))
+            .First(x => x.GetParameters().Length >= 1 && x.GetParameters()[0].ParameterType == InviteType && x.GetParameters()[0].Name == "invite");
+
         public static void Run()
         {
-            //new MatchmakerAcceptScreenUpdate().Enable();
-
             new MatchmakerAcceptScreenAwakePatch().Enable();
             new MatchmakerAcceptScreenShowPatch().Enable();
             new AcceptInvitePatch().Enable();
             new SendInvitePatch().Enable();
-            //new MatchmakerAcceptScreenShowContextPatch().Enable();
-
-            //new ConsistencySinglePatch().Enable();
-            //new ConsistencyMultiPatch().Enable();
-            //new BattlEyePatch().Enable();
-            //new SslCertificatePatch().Enable();
-            //new UnityWebRequestPatch().Enable();
-            //new WebSocketPatch().Enable();
         }
     }
 }

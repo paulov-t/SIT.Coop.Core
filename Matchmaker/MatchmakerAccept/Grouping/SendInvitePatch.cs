@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SIT.Z.Coop.Core.Matchmaker.MatchmakerAccept.Grouping
+namespace SIT.Coop.Core.Matchmaker.MatchmakerAccept.Grouping
 {
     public class SendInvitePatch : ModulePatch
     {
@@ -28,6 +28,7 @@ namespace SIT.Z.Coop.Core.Matchmaker.MatchmakerAccept.Grouping
             Logger.LogInfo("SendInvitePatch.PatchPostfix");
             MatchmakerAcceptPatches.MatchingType = EMatchmakerType.GroupLeader;
             MatchmakerAcceptPatches.HostExpectedNumberOfPlayers++;
+            MatchmakerAcceptPatches.SetGroupId(PatchConstants.GetPHPSESSID());
         }
     }
 }

@@ -1,5 +1,5 @@
 ﻿using SIT.Tarkov.Core;
-using SIT.Z.Coop.Core.Web;
+using SIT.Coop.Core.Web;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SIT.Z.Coop.Core.Player
+namespace SIT.Coop.Core.Player
 {
     internal class PlayerOnInteractWithDoorPatch : ModulePatch
     {
@@ -37,6 +37,9 @@ namespace SIT.Z.Coop.Core.Player
             object door
             , object interactionResult)
         {
+            if (Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer)
+                return;
+
             Logger.LogInfo("OnInteractWithDoorPatch.PatchPostfix");
             Dictionary<string, object> dictionary = new Dictionary<string, object>();
             dictionary.Add("doorId", 

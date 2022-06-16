@@ -8,7 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SIT.Z.Coop.Core.Matchmaker.MatchmakerAccept
+namespace SIT.Coop.Core.Matchmaker.MatchmakerAccept
 {
     public class AcceptInvitePatch : ModulePatch
     {
@@ -25,7 +25,7 @@ namespace SIT.Z.Coop.Core.Matchmaker.MatchmakerAccept
         {
             Logger.LogInfo("AcceptInvitePatch.PatchPostfix");
             MatchmakerAcceptPatches.MatchingType = EMatchmakerType.GroupPlayer;
-            MatchmakerAcceptPatches.SetGroupId(PatchConstants.GetFieldOrPropertyFromInstance<string>(invite, "From"));
+            //MatchmakerAcceptPatches.SetGroupId(PatchConstants.GetFieldOrPropertyFromInstance<string>(invite, "From"));
         }
     }
 }

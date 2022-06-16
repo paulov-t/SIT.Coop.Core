@@ -51,7 +51,7 @@ namespace SIT.Coop.Core.Matchmaker
 
         private static object screenController;
 
-		private static Button _updateListButton;
+        private static Button _updateListButton;
 
         private static CanvasGroup _canvasGroup;
 
@@ -71,24 +71,34 @@ namespace SIT.Coop.Core.Matchmaker
 
 			
 			MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance = __instance;
-            var screenControllerFieldInfo = __instance.GetType().GetField("ScreenController", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
-            if(screenControllerFieldInfo != null)
-            {
-                //Logger.LogInfo("MatchmakerAcceptScreenAwakePatch.PatchPrefix.Found ScreenController FieldInfo");
-                screenController = screenControllerFieldInfo.GetValue(__instance);
-                if(screenController != null)
-                {
+            screenController = MatchmakerAcceptPatches.MatchmakerScreenController;
+            //var screenControllerFieldInfo = __instance.GetType().GetField("ScreenController", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
+            //if(screenControllerFieldInfo != null)
+            //{
+            //    //Logger.LogInfo("MatchmakerAcceptScreenAwakePatch.PatchPrefix.Found ScreenController FieldInfo");
+            //    screenController = screenControllerFieldInfo.GetValue(__instance);
+            //    if(screenController != null)
+            //    {
 
-                }
-            }
+            //    }
+            //}
             //var GotoNextScreenMethod = __instance.GetType().GetMethod("method_15", privateFlags);
             //var BackOutScreenMethod = __instance.GetType().GetMethod("method_20", privateFlags);
             //var UpdateListScreenMethod = __instance.GetType().GetMethod("method_22", privateFlags);
             ____acceptButton.OnClick.AddListener(() => { GoToRaid();});
             ____backButton.OnClick.AddListener(() => { BackOut(); });
+            ____updateListButton.OnClick.AddListener(() => { MatchmakerAcceptPatches.CheckForMatch(); });
 
             _canvasGroup = ____canvasGroup;
             _canvasGroup.interactable = true;
+
+            DefaultUIButton startServerButton = GameObject.Instantiate<DefaultUIButton>(____acceptButton);
+            //RectTransform acceptBtnRectTransform = ____acceptButton.GetComponent<RectTransform>();
+            //RectTransform startServerRectTransform = startServerButton.GetComponent<RectTransform>();
+            //startServerRectTransform.position = acceptBtnRectTransform.position;
+            //startServerRectTransform.anchoredPosition = acceptBtnRectTransform.anchoredPosition;
+            startServerButton.SetRawText("CUNT!", 18);
+
             profile = ___profile_0;
             //return false; // dont do anything, think for ourselves?
             return true; // run the original
@@ -97,56 +107,24 @@ namespace SIT.Coop.Core.Matchmaker
 
         public static void GoToRaid()
         {
-            // SendInvitePatch sets the Host up
+            MatchmakerAcceptPatches.CheckForMatch();
+
             if (MatchmakerAcceptPatches.IsSinglePlayer)
             {
                 Tarkov.Core.PatchConstants.DisplayMessageNotification("Starting Singleplayer Game...");
             }
-            else if(MatchmakerAcceptPatches.IsServer)
+            // SendInvitePatch sets up the Host
+            else if (MatchmakerAcceptPatches.IsServer)
             {
                 Tarkov.Core.PatchConstants.DisplayMessageNotification("Starting Coop Game as Host");
-                if (profile != null)
-                    MatchmakerAcceptPatches.SetGroupId(profile.AccountId);
+                MatchmakerAcceptPatches.SetGroupId(PatchConstants.GetPHPSESSID());
             }
+            // MatchmakerAcceptPatches.CheckForMatch sets up the Client
             else if (MatchmakerAcceptPatches.IsClient)
             {
                 Tarkov.Core.PatchConstants.DisplayMessageNotification("Starting Coop Game as Client");
             }
 
-            //Logger.LogInfo("MatchmakerAcceptPatches.Grouping is " + MatchmakerAcceptPatches.Grouping);
-            //Logger.LogInfo("MatchmakerAcceptPatches.GroupId is " + MatchmakerAcceptPatches.GetGroupId());
-            //Logger.LogInfo("MatchmakerAcceptPatches.IsGroupOwner is " + MatchmakerAcceptPatches.IsGroupOwner());
-
-            //MatchmakerAcceptPatches.MatchingType = EMatchmakerType.Single;
-            //if (string.IsNullOrEmpty(MatchmakerAcceptPatches.GetGroupId()) && profile != null)
-            //{
-            //    MatchmakerAcceptPatches.SetGroupId(profile.AccountId);
-            //}
-            //if (MatchmakerAcceptPatches.Grouping == null || string.IsNullOrEmpty(MatchmakerAcceptPatches.GetGroupId()))
-            //{
-            //    Logger.LogInfo("No Network to Connect to. Running SP Only");
-            //    Tarkov.Core.PatchConstants.DisplayMessageNotification("Starting Singleplayer Game...");
-            //    return;
-            //}
-            ////if (!MatchMakerAcceptScreen.ForcedMatchingType)
-            ////{
-            //MatchmakerAcceptPatches.MatchingType = MatchmakerAcceptPatches.IsGroupOwner() ? EMatchmakerType.GroupLeader : EMatchmakerType.GroupPlayer;
-            //Tarkov.Core.PatchConstants.DisplayMessageNotification("Starting Coop Game...");
-
-            //    MatchMakerAcceptScreen.GroupId = this.gclass2422_0.GroupId;
-            //    MatchMakerAcceptScreen.Group = this.gclass2422_0;
-            //    if (MatchMakerAcceptScreen.IsServer && MatchMakerAcceptScreen.Group != null)
-            //    {
-            //        MatchMakerAcceptScreen.HostExpectedNumberOfPlayers = MatchMakerAcceptScreen.Group.SentInvites.Count + 1;
-            //        MatchmakerCoopImplementation.NumberOfInvites = MatchMakerAcceptScreen.Group.SentInvites.Count;
-            //    }
-            //    Debug.LogError("Starting MP Game as " + MatchMakerAcceptScreen.MyMatchingType.ToString() + " in GroupId " + MatchMakerAcceptScreen.GroupId + " with " + MatchMakerAcceptScreen.HostExpectedNumberOfPlayers + " players");
-            //    GClass1676.DisplayMessageNotification("Starting " + MatchMakerAcceptScreen.MyMatchingType.ToString() + " game with " + MatchmakerCoopImplementation.NumberOfInvites + " pals!");
-            //}
-            //else
-            //{
-            //    Debug.LogError("Starting MP Game as Forced " + MatchMakerAcceptScreen.MyMatchingType);
-            //}
         }
 
         public static void BackOut()
@@ -187,6 +165,7 @@ namespace SIT.Coop.Core.Matchmaker
             }
             
         }
+
 
     }
 

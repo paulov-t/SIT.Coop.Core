@@ -3,7 +3,7 @@ using CoopTarkovGameServer;
 using SIT.Coop.Core.LocalGame;
 using SIT.Coop.Core.Player;
 using SIT.Coop.Core.Player.Weapon;
-using SIT.Z.Coop.Core.Player;
+using SIT.Coop.Core.Player;
 using System.Linq;
 using UnityEngine.SceneManagement;
 
@@ -22,8 +22,6 @@ namespace SIT.Coop.Core
 
             new LocalGameStartingPatch().Enable();
 
-            // .. This can break loot containers, be careful ..
-            //new PlayerOnInteractWithDoorPatch().Enable();
 
             // ------ SPAWN --------------------------
             new LocalGamePlayerSpawn().Enable();
@@ -38,17 +36,15 @@ namespace SIT.Coop.Core
             new PlayerOnRotatePatch().Enable();
             new PlayerOnSayPatch().Enable();
             new PlayerOnSetItemInHandsPatch().Enable();
+            // testing
+            new PlayerOnInteractWithDoorPatch().Enable();
+
 
             // ------ WEAPON -------------------------
             new WeaponOnTriggerPressedPatch().Enable();
             new WeaponOnDropPatch().Enable();
 
-            // ------ HIDDEN LISTEN SERVER -----------
-            Logger.LogInfo("Starting Echo Server");
-            EchoGameServer = new EchoGameServer();
-            EchoGameServer.OnLog += EchoGameServer_OnLog;
-            EchoGameServer.CreateListenersAndStart();
-            Logger.LogInfo("Echo Server started");
+            
 
             // Plugin startup logic
             Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");

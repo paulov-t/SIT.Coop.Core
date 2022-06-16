@@ -2,14 +2,14 @@
 using Newtonsoft.Json;
 using SIT.Coop.Core.HelpfulStructs;
 using SIT.Tarkov.Core;
-using SIT.Z.Coop.Core.Web;
+using SIT.Coop.Core.Web;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using SIT.Tarkov.Core.Health;
+using SIT.Tarkov.Core.PlayerPatches.Health;
 
 namespace SIT.Coop.Core.Player
 {
@@ -153,7 +153,9 @@ namespace SIT.Coop.Core.Player
             }
 
             //// get the health again
+            currentBodyPartHealth = HealthControllerHelpers.GetBodyPartHealth(ActiveHealthController, bodyPart).Current;
             //currentBodyPartHealth = ActiveHealthController.GetBodyPartHealth(bodyPartType).Current;
+            Logger.LogInfo($"ClientApplyDamageInfo::{bodyPart} current health [after] = {currentBodyPartHealth}");
             //UnityEngine.Debug.LogError($"ClientApplyDamageInfo::{bodyPartType} current health [after] = {currentBodyPartHealth}");
 
             //if (currentBodyPartHealth == 0)
@@ -166,18 +168,16 @@ namespace SIT.Coop.Core.Player
             //    }
             //}
 
-            //ValueStruct bodyPartHealth = ActiveHealthController.GetBodyPartHealth(EBodyPart.Common);
-            //if (bodyPartHealth.AtMinimum)
-            //{
-            //    UnityEngine.Debug.LogError($"ClientApplyDamageInfo::Common Health, killing");
+            var currentOVRHealth = HealthControllerHelpers.GetBodyPartHealth(ActiveHealthController, EBodyPart.Common).Current;
+            if (currentOVRHealth == 0)
+            {
+                UnityEngine.Debug.LogError($"ClientApplyDamageInfo::Common Health, killing");
 
-            //    ActiveHealthController.Kill(damageType);
-            //}
+                PatchConstants.GetAllMethodsForObject(ActiveHealthController).Single(x => x.Name == "Kill").Invoke(ActiveHealthController, new object[] { damageType });
+            }
 
-
-
-            //if (!ActiveHealthController.IsAlive)
-            //    return;
+            if (!isAlive)
+                return;
 
             //ActiveHealthController.DoWoundRelapse(damageInfo.Damage, bodyPartType);
         }

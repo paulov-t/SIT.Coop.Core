@@ -2,6 +2,7 @@
 using EFT.Ballistics;
 using EFT.InventoryLogic;
 using SIT.Tarkov.Core;
+using SIT.Tarkov.Core.PlayerPatches.Health;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -172,7 +173,7 @@ namespace SIT.Coop.Core.HelpfulStructs
 
 		public object ToNativeType()
         {
-			var nativeType = Activator.CreateInstance(SIT.Tarkov.Core.Health.HealthControllerHelpers.GetDamageInfoType());
+			var nativeType = Activator.CreateInstance(HealthControllerHelpers.GetDamageInfoType());
 			return nativeType;
         }
 	}

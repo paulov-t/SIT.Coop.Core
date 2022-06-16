@@ -1,13 +1,16 @@
 ﻿using Comfort.Common;
 using EFT;
+using Newtonsoft.Json;
+using SIT.Coop.Core.Matchmaker;
 using SIT.Tarkov.Core;
-using SIT.Z.Coop.Core.Web;
+using SIT.Coop.Core.Web;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 using static SIT.Coop.Core.LocalGame.LocalGamePatches;
 
 namespace SIT.Coop.Core.LocalGame
@@ -51,6 +54,7 @@ namespace SIT.Coop.Core.LocalGame
         [PatchPostfix]
         public static async void PatchPostfix(
             object __instance
+            , Vector3 position
             , Task<EFT.LocalPlayer> __result
             )
         {
@@ -59,6 +63,7 @@ namespace SIT.Coop.Core.LocalGame
             await __result.ContinueWith((x) =>
             {
                 var p = x.Result;
+                
                 Logger.LogInfo($"LocalGamePlayerSpawn:PatchPostfix:{p.GetType()}");
 
                 var profile = PatchConstants.GetPlayerProfile(p);
@@ -67,13 +72,108 @@ namespace SIT.Coop.Core.LocalGame
                     LocalGamePatches.MyPlayer = p;
                 }
 
-                //gameWorld = Singleton<GameWorld>.Instance;
-                //if (gameWorld != null)
-                //{
-                coopGameComponent = Plugin.Instance.GetOrAddComponent<CoopGameComponent>();
-                if(Matchmaker.MatchmakerAcceptPatches.IsClient)
-                {
+                if (coopGameComponent != null)
+                    UnityEngine.Object.Destroy(coopGameComponent);
 
+                if (Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer)
+                    return;
+
+                coopGameComponent = Plugin.Instance.GetOrAddComponent<CoopGameComponent>();
+
+                Dictionary<string, object> dictionary2 = new Dictionary<string, object>
+                    {
+                        {
+                            "accountId",
+                            p.Profile.AccountId
+                        },
+                        {
+                            "profileId",
+                            p.Id
+                        },
+                        {
+                            "groupId",
+                            Matchmaker.MatchmakerAcceptPatches.GetGroupId()
+                        },
+                        {
+                            "nP",
+                            position
+                        },
+                        {
+                            "sP",
+                            position
+                        },
+                        { "m", "PlayerSpawn" },
+                        {
+                            "p.info",
+                            p.Profile.Info.SITToJson()
+                        },
+                        {
+                            "p.cust",
+                             p.Profile.Customization.SITToJson()
+                        },
+                        {
+                            "p.equip",
+                            p.Profile.Inventory.Equipment.CloneItem().ToJson()
+                        }
+                    };
+                new Request().PostJson("/client/match/group/server/players/spawn", dictionary2.ToJson());
+                ServerCommunication.PostLocalPlayerData(p, dictionary2);
+
+                if(Matchmaker.MatchmakerAcceptPatches.IsServer)
+                {
+                    Dictionary<string, object> value2 = new Dictionary<string, object>
+                        {
+                            {
+                                "playersSpawnPoint",
+                                position
+                            },
+                            {
+                                "groupId",
+                                p.Profile.AccountId
+                            }
+                        };
+                    new Request().PostJson("/client/match/group/server/setPlayersSpawnPoint", JsonConvert.SerializeObject(value2));
+                }
+                else if (Matchmaker.MatchmakerAcceptPatches.IsClient)
+                {
+                    int attemptsToReceiveSpawn = 60;
+                    var spawnPointPosition = Vector3.zero;
+                    while (spawnPointPosition == Vector3.zero && attemptsToReceiveSpawn > 0)
+                    {
+                        attemptsToReceiveSpawn--;
+                        //LocalGame.SetMatchmakerStatus($"Retreiving Spawn Location from Server {attemptsToReceiveSpawn}s");
+
+                        try
+                        {
+                            Dictionary<string, object> value3 = new Dictionary<string, object> {
+                                {
+                                    "groupId",
+                                    MatchmakerAcceptPatches.GetGroupId()
+                                } };
+                            string value4 = new Request().PostJson("/client/match/group/server/getPlayersSpawnPoint", JsonConvert.SerializeObject(value3));
+                            if (!string.IsNullOrEmpty(value4))
+                            {
+                                System.Random r = new System.Random();
+                                var randX = r.NextFloat(-1, 1);
+                                var randZ = r.NextFloat(-1, 1);
+                                Vector3 vector = JsonConvert.DeserializeObject<Vector3>(value4);
+                                spawnPointPosition = vector;
+                                PatchConstants.Logger.LogInfo($"Setup Client to use same Spawn at {spawnPointPosition.x}:{spawnPointPosition.y}:{spawnPointPosition.z} as Host");
+                                spawnPointPosition = spawnPointPosition + new Vector3(randX, 0, randZ);
+                                //LocalGame.SetMatchmakerStatus("Spawn Location from Server received");
+                                //await Task.Delay(1000);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            PatchConstants.Logger.LogInfo("Getting Client Spawn Point Failed::ERROR::" + ex.ToString());
+                        }
+                        //await Task.Delay(1000);
+                    }
+                    if(spawnPointPosition != Vector3.zero)
+                    {
+                        p.Teleport(spawnPointPosition, true);
+                    }
                 }
                     //gameWorld.GetType().DontDestroyOnLoad(coopGameComponent);
                 //}

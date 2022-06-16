@@ -1,5 +1,5 @@
 ﻿using SIT.Tarkov.Core;
-using SIT.Z.Coop.Core.Web;
+using SIT.Coop.Core.Web;
 using System;
 using System.Collections.Generic;
 using System.Linq;

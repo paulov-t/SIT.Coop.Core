@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using SIT.Coop.Core.Matchmaker;
 
-namespace SIT.Z.Coop.Core.Web
+namespace SIT.Coop.Core.Web
 {
 
 	public static class ServerCommunication
