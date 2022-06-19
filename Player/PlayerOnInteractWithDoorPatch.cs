@@ -40,15 +40,15 @@ namespace SIT.Coop.Core.Player
             if (Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer)
                 return;
 
-            Logger.LogInfo("OnInteractWithDoorPatch.PatchPostfix");
-            Dictionary<string, object> dictionary = new Dictionary<string, object>();
-            dictionary.Add("doorId", 
-                PatchConstants.GetFieldOrPropertyFromInstance<object>(door, "Id", false));
-            dictionary.Add("interactionResult",
-                PatchConstants.GetFieldOrPropertyFromInstance<object>(interactionResult, "InteractionType", false));
-            dictionary.Add("m", "Door");
-            ServerCommunication.PostLocalPlayerData(__instance, dictionary);
-            Logger.LogInfo("OnInteractWithDoorPatch.PatchPostfix:Sent");
+            //Logger.LogInfo("OnInteractWithDoorPatch.PatchPostfix");
+            //Dictionary<string, object> dictionary = new Dictionary<string, object>();
+            //dictionary.Add("doorId", 
+            //    PatchConstants.GetFieldOrPropertyFromInstance<object>(door, "Id", false));
+            //dictionary.Add("interactionResult",
+            //    PatchConstants.GetFieldOrPropertyFromInstance<object>(interactionResult, "InteractionType", false));
+            //dictionary.Add("m", "Door");
+            //ServerCommunication.PostLocalPlayerData(__instance, dictionary);
+            //Logger.LogInfo("OnInteractWithDoorPatch.PatchPostfix:Sent");
         }
     }
 }

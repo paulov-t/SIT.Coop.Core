@@ -66,7 +66,7 @@ namespace SIT.Coop.Core.LocalGame
             Logger.LogInfo($"LocalGameStartingPatch:PatchPrefix");
             LocalGamePatches.LocalGameInstance = __instance;
             //new LocalGameStartBotSystemPatch().Enable();
-            //new LocalGameBotWaveSystemPatch().Enable();
+            new LocalGameBotWaveSystemPatch().Enable();
 
             await StartAndConnectToServer(__instance);
         }
@@ -187,8 +187,8 @@ namespace SIT.Coop.Core.LocalGame
 
                                         var method = dictionary["method"].ToString();
 
-                                        LocalGamePatches.ClientQueuedActions.TryAdd(method, new ConcurrentQueue<Dictionary<string, object>>());
-                                        LocalGamePatches.ClientQueuedActions[method].Enqueue(dictionary);
+                                        CoopGameComponent.ClientQueuedActions.TryAdd(method, new ConcurrentQueue<Dictionary<string, object>>());
+                                        CoopGameComponent.ClientQueuedActions[method].Enqueue(dictionary);
                                     }
                                 }
                                 //if (@string.IndexOf('[') == 0 && @string.EndsWith("]"))

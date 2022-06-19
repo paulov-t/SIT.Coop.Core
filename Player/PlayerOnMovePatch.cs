@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using Newtonsoft.Json;
 
 namespace SIT.Coop.Core.Player
 {
@@ -53,7 +54,7 @@ namespace SIT.Coop.Core.Player
                 return;
 
             Dictionary<string, object> dictionary = new Dictionary<string, object>();
-            dictionary.Add("nP", __instance.Transform.position);
+            dictionary.Add("nP", __instance.Transform.position.ToJson());
             dictionary.Add("dX", direction.x.ToString());
             dictionary.Add("dY", direction.y.ToString());
             dictionary.Add("vel", __instance.MovementContext.Velocity);
@@ -70,34 +71,36 @@ namespace SIT.Coop.Core.Player
 
         public static void MoveReplicated(EFT.Player player, Dictionary<string, object> dict)
         {
-            try
-            {
-                Vector2 direction = new Vector2(float.Parse(dict["dX"].ToString()), float.Parse(dict["dY"].ToString()));
-                direction.x = Math.Sign(direction.x);
-                direction.y = Math.Sign(direction.y);
-                player.MovementContext.MovementDirection = direction;
+            var newPos = JsonConvert.DeserializeObject<Vector3>(dict["nP"].ToString());
+            player.Teleport(newPos);
+            //try
+            //{
+            //    Vector2 direction = new Vector2(float.Parse(dict["dX"].ToString()), float.Parse(dict["dY"].ToString()));
+            //    direction.x = Math.Sign(direction.x);
+            //    direction.y = Math.Sign(direction.y);
+            //    player.MovementContext.MovementDirection = direction;
 
-                bool enableSprint = false;
-                if (dict.ContainsKey("sprint"))
-                    enableSprint = bool.Parse(dict["sprint"].ToString());
+            //    bool enableSprint = false;
+            //    if (dict.ContainsKey("sprint"))
+            //        enableSprint = bool.Parse(dict["sprint"].ToString());
 
-                player.MovementContext.EnableSprint(enableSprint && direction.y > 0.1f);
-                if (player.MovementContext.IsSprintEnabled)
-                {
-                    player.MovementContext.SetPoseLevel(1f);
-                    if (player.MovementContext.PoseLevel > 0.9f && player.MovementContext.SmoothedCharacterMovementSpeed >= 1f)
-                    {
-                        player.MovementContext.PlayerAnimatorEnableSprint(true);
-                    }
-                }
-                if (dict.ContainsKey("spd"))
-                    player.MovementContext.CharacterMovementSpeed = float.Parse(dict["spd"].ToString());
-                player.MovementContext.PlayerAnimatorEnableInert(false);
-            }
-            catch(Exception ex)
-            {
-                Logger.LogInfo("PlayerOnMovePatch.MoveReplicated:ERROR:" + ex.Message);
-            }
+            //    player.MovementContext.EnableSprint(enableSprint && direction.y > 0.1f);
+            //    if (player.MovementContext.IsSprintEnabled)
+            //    {
+            //        player.MovementContext.SetPoseLevel(1f);
+            //        if (player.MovementContext.PoseLevel > 0.9f && player.MovementContext.SmoothedCharacterMovementSpeed >= 1f)
+            //        {
+            //            player.MovementContext.PlayerAnimatorEnableSprint(true);
+            //        }
+            //    }
+            //    if (dict.ContainsKey("spd"))
+            //        player.MovementContext.CharacterMovementSpeed = float.Parse(dict["spd"].ToString());
+            //    player.MovementContext.PlayerAnimatorEnableInert(false);
+            //}
+            //catch(Exception ex)
+            //{
+            //    Logger.LogInfo("PlayerOnMovePatch.MoveReplicated:ERROR:" + ex.Message);
+            //}
         }
     }
 }

@@ -79,6 +79,9 @@ namespace SIT.Coop.Core.LocalGame
                     return;
 
                 coopGameComponent = Plugin.Instance.GetOrAddComponent<CoopGameComponent>();
+                // TODO: Shouldnt this be a member variable, not static?
+                CoopGameComponent.Players.TryAdd(PatchConstants.GetPlayerProfileAccountId(profile), p);
+
 
                 Dictionary<string, object> dictionary2 = new Dictionary<string, object>
                     {
@@ -88,7 +91,7 @@ namespace SIT.Coop.Core.LocalGame
                         },
                         {
                             "profileId",
-                            p.Id
+                            p.ProfileId
                         },
                         {
                             "groupId",
@@ -117,7 +120,7 @@ namespace SIT.Coop.Core.LocalGame
                         }
                     };
                 new Request().PostJson("/client/match/group/server/players/spawn", dictionary2.ToJson());
-                ServerCommunication.PostLocalPlayerData(p, dictionary2);
+                //ServerCommunication.PostLocalPlayerData(p, dictionary2);
 
                 if(Matchmaker.MatchmakerAcceptPatches.IsServer)
                 {

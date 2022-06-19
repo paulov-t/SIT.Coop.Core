@@ -108,12 +108,12 @@ namespace CoopTarkovGameServer
             {
                 var newPort = udpReceiverPort + i;
                 var udpReceiver = new UdpClient(newPort);
-                AddToLog("Started udp receiver on Port " + newPort);
+                AddToLog(this.GetType() + ": Started udp receiver on Port " + newPort);
                 //udpReceiver.AllowNatTraversal(true);
                 //udpReceiver.DontFragment = true;
                 //udpReceiver.DontFragment = false;
-                udpReceiver.Client.SendTimeout = HighestAcceptablePing;
-                udpReceiver.Client.ReceiveTimeout = HighestAcceptablePing;
+                udpReceiver.Client.SendTimeout = 500; // defaulted min
+                udpReceiver.Client.ReceiveTimeout = 500; // defaulted min
                 const int SIO_UDP_CONNRESET = -1744830452;
                 udpReceiver.Client.IOControl(
                     (IOControlCode)SIO_UDP_CONNRESET,
@@ -130,11 +130,11 @@ namespace CoopTarkovGameServer
                 udpReceivers.Add(udpReceiver);
             }
 
-                tcpServer = new TcpListener(new IPEndPoint(IPAddress.Any, 7076));
-                tcpServer.Server.ReceiveBufferSize = 2048;
-                tcpServer.Server.ReceiveTimeout = HighestAcceptablePing;
-                tcpServer.Server.SendTimeout = HighestAcceptablePing;
-            StartTcpServerAndAccept();    
+            //    tcpServer = new TcpListener(new IPEndPoint(IPAddress.Any, 7076));
+            //    tcpServer.Server.ReceiveBufferSize = 2048;
+            //    tcpServer.Server.ReceiveTimeout = HighestAcceptablePing;
+            //    tcpServer.Server.SendTimeout = HighestAcceptablePing;
+            //StartTcpServerAndAccept();    
 
      
                     UpdatePings();
@@ -144,7 +144,7 @@ namespace CoopTarkovGameServer
         public void StartTcpServerAndAccept()
         {
             tcpServer.Start();
-            AddToLog("Started tcp receiver on " + tcpServer.LocalEndpoint);
+            AddToLog(this.GetType() + ": Started tcp receiver on " + tcpServer.LocalEndpoint);
             tcpServer.BeginAcceptTcpClient((IAsyncResult result) =>
             {
                 StartTcpServerAndAccept();
@@ -259,7 +259,8 @@ namespace CoopTarkovGameServer
                 //    var bytes = ASCIIEncoding.ASCII.GetBytes(JsonConvert.SerializeObject(DataProcessInsurance));
                 //    EnqueuedDataToSend.Enqueue((null, bytes, null));
                 //}
-                while (EnqueuedDataToSend.Any())
+                //while (EnqueuedDataToSend.Any())
+                if (EnqueuedDataToSend.Any())
                 {
                     if(EnqueuedDataToSend.TryDequeue(out (IPEndPoint, byte[], string) result))
                     {
@@ -280,7 +281,7 @@ namespace CoopTarkovGameServer
             }
             catch (Exception ex)
             {
-                AddToLog(ex.ToString());
+                AddToLog(this.GetType() + ex.ToString());
             }
             await Task.Delay(1);
             ServerSendOutEnqueuedData();
@@ -389,7 +390,7 @@ namespace CoopTarkovGameServer
                     //}
 
                     EnqueuedDataToSend.Enqueue((receivedIpEndPoint, array, null));
-
+                    /*
                     var dictData = JsonConvert.DeserializeObject<Dictionary<string, object>>(@string);
                     if (dictData != null)
                     {
@@ -472,7 +473,7 @@ namespace CoopTarkovGameServer
 
                         }
                     }
-
+                    */
 
                 }
                 catch (Exception ex)
@@ -521,13 +522,13 @@ namespace CoopTarkovGameServer
                 if (isHost)
                     HostConnection = (receivedIpEndPoint, playerId);
 
-                Debug.WriteLine("DataReceivedServer::New Connection from " + receivedIpEndPoint.ToString());
-                Console.WriteLine("DataReceivedServer::New Connection from " + receivedIpEndPoint.ToString());
+                //Debug.WriteLine(this.GetType() + ": DataReceivedServer::New Connection from " + receivedIpEndPoint.ToString());
+                //Console.WriteLine(this.GetType() + ": DataReceivedServer::New Connection from " + receivedIpEndPoint.ToString());
                 if(OnConnectionReceived != null)
                 {
                     OnConnectionReceived(receivedIpEndPoint);
                 }
-                AddToLog("DataReceivedServer::New Connection from " + receivedIpEndPoint.ToString());
+                AddToLog(this.GetType() + ": DataReceivedServer::New Connection from " + receivedIpEndPoint.ToString());
             }
         }
 
