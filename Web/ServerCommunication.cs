@@ -69,7 +69,6 @@ namespace SIT.Coop.Core.Web
 				PatchConstants.Logger.LogInfo("Setting ServerCommunicationCoopImplementation backendurlip::" + backendUrlIp);
 			}
 			var returnedIp = new Request().PostJson("/client/match/group/server/getGameServerIp", data: dataDict.ToJson());
-			PatchConstants.Logger.LogInfo("GetUdpClient::Game Server IP is " + returnedIp);
 			if (!string.IsNullOrEmpty(returnedIp))
 			{
 				if (IPAddress.TryParse(returnedIp, out _))
@@ -77,18 +76,25 @@ namespace SIT.Coop.Core.Web
 					backendUrlIp = returnedIp;
 				}
 			}
+			PatchConstants.Logger.LogInfo("GetUdpClient::Game Server IP is " + backendUrlIp);
 
 			UdpClient udpClient = new UdpClient(backendUrlIp, (reliable ? udpServerPort + 1 : udpServerPort));
 			udpClient.Client.SendBufferSize = 50;
 			udpClient.Client.ReceiveBufferSize = 50;
-			udpClient.Client.ReceiveTimeout = 50;
-			udpClient.Client.SendTimeout = 50;
-			udpClient.Send(Encoding.UTF8.GetBytes("Connect="), Encoding.UTF8.GetBytes("Connect=").Length);
-			//udpClient.BeginSend(Encoding.UTF8.GetBytes("Connect="), Encoding.UTF8.GetBytes("Connect=").Length, (IAsyncResult ar) => { }, null);
+			udpClient.Client.ReceiveTimeout = 0;
+			udpClient.Client.SendTimeout = 0;
 			udpClient.BeginReceive(ReceiveUdp, udpClient);
+			var connectMessage = "Connect=" + SIT.Tarkov.Core.PatchConstants.GetPHPSESSID();
+			PatchConstants.Logger.LogInfo(connectMessage);
+			var connectMessageBytes = Encoding.UTF8.GetBytes(connectMessage);
+			udpClient.Send(connectMessageBytes, connectMessageBytes.Length);
+			//udpClient.BeginSend(Encoding.UTF8.GetBytes("Connect="), Encoding.UTF8.GetBytes("Connect=").Length, (IAsyncResult ar) => { }, null);
 
 			if (!udpClients.Contains(udpClient))
 				udpClients.Add(udpClient);
+
+			PatchConstants.Logger.LogInfo("GetUdpClient::Created Udp Client and running");
+
 
 			return udpClient;
 		}
@@ -102,8 +108,6 @@ namespace SIT.Coop.Core.Web
 			{
 				OnDataReceived(data);
 			}
-			//ServerHandleReceivedData(data, endPoint);
-
 			udpClient.BeginReceive(ReceiveUdp, udpClient);
 		}
 

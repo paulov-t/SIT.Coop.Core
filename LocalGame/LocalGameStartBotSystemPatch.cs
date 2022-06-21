@@ -1,5 +1,6 @@
 ﻿using Comfort.Common;
 using EFT;
+using EFT.UI;
 using SIT.Tarkov.Core;
 using System;
 using System.Collections.Generic;
@@ -66,18 +67,17 @@ namespace SIT.Coop.Core.LocalGame
         }
 
         [PatchPrefix]
-        public static bool PatchPrefix(
-            object __instance
-            , object botsSettings, object spawnSystem, Callback runCallback
-            )
+        public static bool PatchPrefix(Callback runCallback, object ___gameUI_0)
         {
             Logger.LogInfo($"LocalGameStartBotSystemPatch:PatchPrefix");
             if(!Matchmaker.MatchmakerAcceptPatches.IsClient)
                 return true;
 
-            return true;
 
-            //int timeBeforeDeploy = 5;
+
+            //return true;
+
+            int timeBeforeDeploy = 5;
             //if (TimeBeforeDeployMethod == null)
             //{
             //    Logger.LogInfo($"LocalGameStartBotSystemPatch:PatchPrefix:TimeBeforeDeployMethod is NULL");
@@ -91,23 +91,15 @@ namespace SIT.Coop.Core.LocalGame
             //    SetupExfilsBeforeStartMethod.Invoke(__instance, null);
             //}
 
+            //Singleton<GUISounds>.Instance.method_4();
+            Singleton<BetterAudio>.Instance.TweenAmbientVolume(0f, timeBeforeDeploy);
+            //this.gameUI_0.gameObject.SetActive(true);
+            //this.gameUI_0.TimerPanel.ProfileId = this.ProfileId;
+
             //runCallback.Succeed();
-            ////return false;
-            //return true;
+            //return false;
+            return true;
         }
 
-        [PatchPostfix]
-        public static void PatchPostfix(
-           object __instance
-           , object botsSettings, object spawnSystem, Callback runCallback
-           
-           )
-        {
-            Logger.LogInfo($"LocalGameStartBotSystemPatch:PatchPostfix");
-            if (!Matchmaker.MatchmakerAcceptPatches.IsClient)
-                return;
-
-            
-        }
     }
 }

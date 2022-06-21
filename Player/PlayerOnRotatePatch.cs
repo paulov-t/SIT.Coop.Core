@@ -51,11 +51,11 @@ namespace SIT.Coop.Core.Player
             dictionary.Add("arX", __instance.MovementContext.Rotation.x);
             dictionary.Add("arY", __instance.MovementContext.Rotation.y);
             dictionary.Add("m", "Rotate");
-            Task.Run(delegate
-            {
-                ServerCommunication.PostLocalPlayerData(__instance, dictionary);
-                //MatchMakerAcceptScreen.ServerCommunicationCoopImplementation.PostLocalPlayerData(this, dictionary);
-            });
+            //Task.Run(delegate
+            //{
+            //    //ServerCommunication.PostLocalPlayerData(__instance, dictionary);
+            //    //MatchMakerAcceptScreen.ServerCommunicationCoopImplementation.PostLocalPlayerData(this, dictionary);
+            //});
             //Logger.LogInfo("PlayerOnSayPatch.PatchPostfix:Sent");
 
         }

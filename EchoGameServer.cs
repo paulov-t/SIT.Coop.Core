@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using SIT.Coop.Core;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -45,8 +46,8 @@ namespace CoopTarkovGameServer
         public delegate void LogHandler(string text);
         public event LogHandler OnLog;
 
-        public delegate void MethodCallHandler(ConcurrentDictionary<string, int> actionCounts);
-        public event MethodCallHandler OnMethodCall;
+        //public delegate void MethodCallHandler(ConcurrentDictionary<string, int> actionCounts);
+        //public event MethodCallHandler OnMethodCall;
 
         public static EchoGameServer Instance { get { return Instances.Last(); } }
         public static List<EchoGameServer> Instances = new List<EchoGameServer>();
@@ -56,7 +57,7 @@ namespace CoopTarkovGameServer
         public List<UdpClient> udpReceivers;
         public int CurrentReceiverIndex = 0;
         public int NumberOfReceivers = 2; // Two Channels. Reliable and Unreliable
-        public int udpReceiverPort = 7070;
+        public int udpReceiverPort { get { return Plugin.UDPPort; } }
         public DateTime StartupTime = DateTime.Now;
         public bool quit;
         public int NumberOfConnections = 0;
@@ -91,10 +92,10 @@ namespace CoopTarkovGameServer
         public Guid InstanceId  { get; private set; }
         public readonly List<TcpClient> ConnectedClientsTcp = new List<TcpClient>();
 
-        public EchoGameServer(int? startingUdpPort = null)
+        public EchoGameServer()
         {
             InstanceId = Guid.NewGuid();
-            if (startingUdpPort.HasValue) udpReceiverPort = startingUdpPort.Value;
+            //if (startingUdpPort.HasValue) udpReceiverPort = startingUdpPort.Value;
             // Only handle 1 instance for now
             Instances.Clear();
             Instances.Add(this);
@@ -107,6 +108,12 @@ namespace CoopTarkovGameServer
             for (var i = 0; i < NumberOfReceivers; i++)
             {
                 var newPort = udpReceiverPort + i;
+
+                //if (UPnP.NAT.Discover())
+                //{
+                //    UPnP.NAT.ForwardPort(newPort, ProtocolType.Udp, "SIT-Tarkov-" + i);
+                //}
+
                 var udpReceiver = new UdpClient(newPort);
                 AddToLog(this.GetType() + ": Started udp receiver on Port " + newPort);
                 //udpReceiver.AllowNatTraversal(true);
@@ -141,45 +148,45 @@ namespace CoopTarkovGameServer
             ServerSendOutEnqueuedData();
         }
 
-        public void StartTcpServerAndAccept()
-        {
-            tcpServer.Start();
-            AddToLog(this.GetType() + ": Started tcp receiver on " + tcpServer.LocalEndpoint);
-            tcpServer.BeginAcceptTcpClient((IAsyncResult result) =>
-            {
-                StartTcpServerAndAccept();
-                TcpClient client = tcpServer.EndAcceptTcpClient(result);  //creates the TcpClient
-                NetworkStream ns = client.GetStream();
-                ConnectedClientsTcp.Add(client);
-                while (client.Connected)  //while the client is connected, we look for incoming messages
-                {
-                    try
-                    {
-                        byte[] msg = new byte[2048];     //the messages arrive as byte array
-                        ns.Read(msg, 0, msg.Length);   //the same networkstream reads the message sent by the client
-                        Debug.WriteLine("TCP:" + Encoding.Default.GetString(msg));
-                        AddToLog("TCP:" + Encoding.Default.GetString(msg));
-                        foreach(var cc in ConnectedClientsTcp)
-                        {
-                            NetworkStream ccns = cc.GetStream();
-                            if(ccns != null && ccns.CanWrite)
-                            {
-                                ccns.Write(msg, 0, msg.Length);
-                            }
+        //public void StartTcpServerAndAccept()
+        //{
+        //    tcpServer.Start();
+        //    AddToLog(this.GetType() + ": Started tcp receiver on " + tcpServer.LocalEndpoint);
+        //    tcpServer.BeginAcceptTcpClient((IAsyncResult result) =>
+        //    {
+        //        StartTcpServerAndAccept();
+        //        TcpClient client = tcpServer.EndAcceptTcpClient(result);  //creates the TcpClient
+        //        NetworkStream ns = client.GetStream();
+        //        ConnectedClientsTcp.Add(client);
+        //        while (client.Connected)  //while the client is connected, we look for incoming messages
+        //        {
+        //            try
+        //            {
+        //                byte[] msg = new byte[2048];     //the messages arrive as byte array
+        //                ns.Read(msg, 0, msg.Length);   //the same networkstream reads the message sent by the client
+        //                Debug.WriteLine("TCP:" + Encoding.Default.GetString(msg));
+        //                AddToLog("TCP:" + Encoding.Default.GetString(msg));
+        //                foreach(var cc in ConnectedClientsTcp)
+        //                {
+        //                    NetworkStream ccns = cc.GetStream();
+        //                    if(ccns != null && ccns.CanWrite)
+        //                    {
+        //                        ccns.Write(msg, 0, msg.Length);
+        //                    }
 
-                        }
-                        client.Close();
-                        //ns.Write(msg, 0, msg.Length);
-                    }
-                    catch (Exception)
-                    {
-                    }
-                }
-                ConnectedClientsTcp.Remove(client);
+        //                }
+        //                client.Close();
+        //                //ns.Write(msg, 0, msg.Length);
+        //            }
+        //            catch (Exception)
+        //            {
+        //            }
+        //        }
+        //        ConnectedClientsTcp.Remove(client);
 
 
-            }, tcpServer);  //this is called asynchronously and will run in a different thread
-        }
+        //    }, tcpServer);  //this is called asynchronously and will run in a different thread
+        //}
 
         public void UdpReceive(IAsyncResult ar)
         {
@@ -379,17 +386,17 @@ namespace CoopTarkovGameServer
                     }
 
                     AddNewConnection(receivedIpEndPoint, null);
-                    //foreach (var client in ConnectedClients.Keys)
-                    //{
-                    //    foreach (var udpServer in udpReceivers)
-                    //    {
-                    //        //udpServer.Send(array, array.Length, client);
-                    //        //udp.Send(new ReadOnlySpan<byte>(array));
-                    //        //udp.BeginSend(array, array.Length, (IAsyncResult r) => { }, client);
-                    //    }
-                    //}
+                    foreach (var client in ConnectedClients.Keys)
+                    {
+                        foreach (var udpServer in udpReceivers)
+                        {
+                            _ = udpServer.SendAsync(array, array.Length, client);
+                            //udp.Send(new ReadOnlySpan<byte>(array));
+                            //udp.BeginSend(array, array.Length, (IAsyncResult r) => { }, client);
+                        }
+                    }
 
-                    EnqueuedDataToSend.Enqueue((receivedIpEndPoint, array, null));
+                    //EnqueuedDataToSend.Enqueue((receivedIpEndPoint, array, null));
                     /*
                     var dictData = JsonConvert.DeserializeObject<Dictionary<string, object>>(@string);
                     if (dictData != null)
@@ -505,12 +512,15 @@ namespace CoopTarkovGameServer
         {
             if (receivedIpEndPoint == null)
             {
-                Console.WriteLine("IP End Point is NULL! WTF!");
+                AddToLog("IP End Point is NULL! WTF!");
                 return;
             }
 
             if (udpReceivers.Count == 0)
+            {
+                AddToLog("AddNewConnection attempting to add new connection when there are no receivers!");
                 return;
+            }
 
             if (!ConnectedClients.Keys.Any((IPEndPoint x) => x.ToString() == receivedIpEndPoint.ToString()))
             {

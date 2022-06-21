@@ -13,12 +13,15 @@ namespace SIT.Coop.Core
     [BepInDependency(SIT.A.Tarkov.Core.PluginInfo.PLUGIN_GUID)]
     public class Plugin : BaseUnityPlugin
     {
+        public static int UDPPort { get; private set; } = 7070;
         public static Plugin Instance { get; private set; }
         public static EchoGameServer EchoGameServer { get; private set; }
         private void Awake()
         {
             Instance = this;
             Matchmaker.MatchmakerAcceptPatches.Run();
+
+            UDPPort = Config.Bind<int>("Server", "Port", 7070).Value;
 
             new LocalGameStartingPatch().Enable();
 

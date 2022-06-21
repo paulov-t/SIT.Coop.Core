@@ -13,8 +13,8 @@ namespace SIT.Coop.Core.LocalGame
     {
         protected override MethodBase GetTargetMethod()
         {
-            //var t = LocalGamePatches.LocalGameInstance.GetType().BaseType;
-            var t = LocalGamePatches.LocalGameInstance.GetType();
+            var t = LocalGamePatches.LocalGameInstance.GetType().BaseType;
+            //var t = LocalGamePatches.LocalGameInstance.GetType();
 
             var method = PatchConstants.GetAllMethodsForType(t)
                 .FirstOrDefault(x => x.GetParameters().Length == 2
@@ -25,7 +25,7 @@ namespace SIT.Coop.Core.LocalGame
         }
 
         [PatchPrefix]
-        public static bool PatchPrefix(object wavesSettings, WildSpawnWave[] waves, WildSpawnWave[] __result)
+        public static bool PatchPrefix(object wavesSettings, WildSpawnWave[] waves, ref WildSpawnWave[] __result)
         {
             if (!Matchmaker.MatchmakerAcceptPatches.IsClient)
                 return true;
@@ -40,20 +40,6 @@ namespace SIT.Coop.Core.LocalGame
             //___wavesSpawnScenario_0.Stop();
 
             return false;
-        }
-
-        [PatchPostfix]
-        public static void PatchPostfix(object wavesSettings, WildSpawnWave[] waves, WildSpawnWave[] __result, WavesSpawnScenario ___wavesSpawnScenario_0)
-        {
-            foreach (WildSpawnWave wildSpawnWave in waves)
-            {
-                wildSpawnWave.slots_min = 0;
-                wildSpawnWave.slots_max = 0;
-            }
-
-            __result = waves;
-
-            //___wavesSpawnScenario_0.Stop();
         }
     }
 }

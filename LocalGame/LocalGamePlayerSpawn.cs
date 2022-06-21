@@ -78,7 +78,8 @@ namespace SIT.Coop.Core.LocalGame
                 if (Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer)
                     return;
 
-                coopGameComponent = Plugin.Instance.GetOrAddComponent<CoopGameComponent>();
+                gameWorld = Singleton<GameWorld>.Instance;
+                coopGameComponent = gameWorld.GetOrAddComponent<CoopGameComponent>();
                 // TODO: Shouldnt this be a member variable, not static?
                 CoopGameComponent.Players.TryAdd(PatchConstants.GetPlayerProfileAccountId(profile), p);
 

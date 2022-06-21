@@ -44,28 +44,36 @@ namespace SIT.Coop.Core.LocalGame
 
 		private EFT.LocalPlayer GetPlayerByAccountId(string accountId)
 		{
-			if (LocalGamePatches.MyPlayerProfile != null && LocalGamePatches.MyPlayerProfile.AccountId == accountId)
-				return LocalGamePatches.MyPlayer as EFT.LocalPlayer;
-
-			if (Players != null && Players.ContainsKey(accountId))
-				return Players[accountId] as EFT.LocalPlayer;
-
-			var player = GameObject.FindObjectsOfType<EFT.LocalPlayer>().FirstOrDefault(x => x.Profile.AccountId == accountId);
-			if (player == null)
+			try
 			{
-				//PatchConstants.Logger.LogInfo($"Unable to find Profile of {accountId}");
-				return null;
-			}
+				if (LocalGamePatches.MyPlayerProfile != null && LocalGamePatches.MyPlayerProfile.AccountId == accountId)
+					return LocalGamePatches.MyPlayer as EFT.LocalPlayer;
 
-			PatchConstants.Logger.LogInfo($"Adding Profile of {accountId} to Players list");
-			Players.TryAdd(accountId, player);
-			return player;
+				if (Players != null && Players.ContainsKey(accountId))
+					return Players[accountId] as EFT.LocalPlayer;
+
+				var allPlayers = FindObjectsOfType<EFT.LocalPlayer>();
+				if (allPlayers != null)
+				{
+					var player = allPlayers.FirstOrDefault(x => x.Profile.AccountId == accountId);
+					if (player == null)
+					{
+						//PatchConstants.Logger.LogInfo($"Unable to find Profile of {accountId}");
+						return null;
+					}
+
+					PatchConstants.Logger.LogInfo($"Adding Profile of {accountId} to Players list");
+					Players.TryAdd(accountId, player);
+					return player;
+				}
+			}
+			catch (Exception)
+            {
+            }
+
+			return null;
 
 		}
-
-		private readonly ConcurrentQueue<(Profile, Vector3, bool)> BotsToSpawn = new ConcurrentQueue<(Profile, Vector3, bool)>();
-
-
 
 		private readonly ConcurrentDictionary<string, (Profile, Vector3, ESpawnState)> PlayersToSpawn = new ConcurrentDictionary<string, (Profile, Vector3, ESpawnState)>();
 
@@ -255,17 +263,18 @@ namespace SIT.Coop.Core.LocalGame
 										PatchConstants.Logger.LogInfo("Door");
 										break;
 									case "Move":
-										PlayerOnMovePatch.MoveReplicated(player, dictionary);
+										//PlayerOnMovePatch.MoveReplicated(player, dictionary);
 										break;
 									case "Rotate":
 										//PatchConstants.Logger.LogInfo("Rotate");
 										//PlayerOnRotatePatch.RotateReplicated(player, dictionary);
 										break;
-									//case "PlayerSpawn":
-									//	PatchConstants.Logger.LogInfo("PlayerSpawn");
-									//	break;
-
-
+									case "Say":
+										break;
+									case "SetTriggerPressed":
+										break;
+									case "SetItemsInHands":
+										break;
 
 								}
 							}
@@ -529,6 +538,7 @@ namespace SIT.Coop.Core.LocalGame
 									if (MatchmakerAcceptPatches.IsServer)
 									{
 										//this.gclass1220_0.AddActivePLayer(result);
+										SIT.Tarkov.Core.AI.BotSystemHelpers.AddActivePlayer(result);
 									}
 
 									if (Players.TryAdd(newPlayerToSpawn.Item1.AccountId, result))

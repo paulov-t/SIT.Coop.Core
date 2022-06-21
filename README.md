@@ -17,3 +17,7 @@ You can obtain it here. [https://www.escapefromtarkov.com](https://www.escapefro
 
 ## BepInEx Module
 Can only be used with BepInEx 5
+
+## SIT Tarkov Server Mod
+- The following [Server](https://github.com/paulov-t/Tarkov-Server) is *required* for this BepInEx module to work. 
+- The following [Server mod](https://github.com/paulov-t/SIT-Mod-Coop) is *required* for this BepInEx module to work. 

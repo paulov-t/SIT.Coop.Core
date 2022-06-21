@@ -66,6 +66,7 @@ namespace SIT.Coop.Core.LocalGame
             Logger.LogInfo($"LocalGameStartingPatch:PatchPrefix");
             LocalGamePatches.LocalGameInstance = __instance;
             //new LocalGameStartBotSystemPatch().Enable();
+            new SIT.Coop.Core.LocalGame.LocalGameSpawnAICoroutinePatch().Enable();
             new LocalGameBotWaveSystemPatch().Enable();
 
             await StartAndConnectToServer(__instance);
@@ -77,11 +78,11 @@ namespace SIT.Coop.Core.LocalGame
             , Task __result
             )
         {
-            Logger.LogInfo($"LocalGameStartingPatch:PatchPostfix");
+            //Logger.LogInfo($"LocalGameStartingPatch:PatchPostfix");
             LocalGamePatches.LocalGameInstance = __instance;
 
+            Logger.LogInfo($"LocalGameStartingPatch:PatchPostfix:Connecting to Echo Server");
             await StartAndConnectToServer(__instance);
-            ServerCommunication.OnDataReceived += ServerCommunication_OnDataReceived;
         }
 
         public static async Task StartAndConnectToServer(object __instance)
@@ -117,14 +118,15 @@ namespace SIT.Coop.Core.LocalGame
                     //string myExternalAddress = ServerCommunication.GetMyExternalAddress();
 
                     // ------ As Host, Notify Central Server --------
-                    new Request().PostJson("/client/match/group/server/start", JsonConvert.SerializeObject(""));
+                    await new Request().PostJsonAsync("/client/match/group/server/start", JsonConvert.SerializeObject(""));
+                    await ServerCommunication.SendDataDownWebSocket("Start=" + PatchConstants.GetPHPSESSID());
                     await Task.Delay(500);
                 }
                 else
                 {
                     Logger.LogInfo("LocalGameStartingPatch.StartAndConnectToServer : Joining Server");
 
-                    new Request().PostJson("/client/match/group/server/join", JsonConvert.SerializeObject(MatchmakerAcceptPatches.GetGroupId()));
+                    await new Request().PostJsonAsync("/client/match/group/server/join", JsonConvert.SerializeObject(MatchmakerAcceptPatches.GetGroupId()));
                     await Task.Delay(500);
                 }
                 //SetMatchmakerStatus("Attempting to connect to Game Host. . . (BepInEx)");
@@ -145,6 +147,7 @@ namespace SIT.Coop.Core.LocalGame
 
                 //MatchMakerAcceptScreen.ServerCommunicationCoopImplementation.OnPostLocalPlayerData += ServerCommunicationCoopImplementation_OnPostLocalPlayerData;
             }
+            ServerCommunication.OnDataReceived += ServerCommunication_OnDataReceived;
         }
 
         private static void EchoGameServer_OnLog(string text)
@@ -154,9 +157,9 @@ namespace SIT.Coop.Core.LocalGame
 
         private static void ServerCommunication_OnDataReceived(byte[] buffer)
         {
-            //Logger.LogInfo($"LocalGameStartingPatch:OnDataReceived");
             if (buffer.Length == 0)
                 return;
+
 
             //using (StreamReader streamReader = new StreamReader(new MemoryStream(buffer)))
             {
@@ -165,7 +168,6 @@ namespace SIT.Coop.Core.LocalGame
                     {
                         //string @string = streamReader.ReadToEnd();
                         string @string = UTF8Encoding.UTF8.GetString(buffer);
-                        //Logger.LogInfo(@string);    
 
                         if (@string.Length == 4 && @string == "Ping")
                         {
@@ -177,6 +179,8 @@ namespace SIT.Coop.Core.LocalGame
                         {
                             Task.Run(() =>
                             {
+                                //Logger.LogInfo($"LocalGameStartingPatch:OnDataReceived:{buffer.Length}");
+
                                 if (@string.Length > 0 && @string[0] == '{' && @string[@string.Length - 1] == '}')
                                 {
                                     var dictionary = JsonConvert.DeserializeObject<Dictionary<string, object>>(@string);
@@ -186,6 +190,8 @@ namespace SIT.Coop.Core.LocalGame
                                             dictionary.Add("method", dictionary["m"]);
 
                                         var method = dictionary["method"].ToString();
+
+                                        //Logger.LogInfo($"LocalGameStartingPatch:OnDataReceived:{method}");
 
                                         CoopGameComponent.ClientQueuedActions.TryAdd(method, new ConcurrentQueue<Dictionary<string, object>>());
                                         CoopGameComponent.ClientQueuedActions[method].Enqueue(dictionary);

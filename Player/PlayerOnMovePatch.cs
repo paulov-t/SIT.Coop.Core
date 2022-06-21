@@ -63,10 +63,10 @@ namespace SIT.Coop.Core.Player
             dictionary.Add("mdY", __instance.MovementContext.MovementDirection.y);
             dictionary.Add("sprint", __instance.MovementContext.IsSprintEnabled);
             dictionary.Add("m", "Move");
-            Task.Run(delegate
-            {
-               ServerCommunication.PostLocalPlayerData(__instance, dictionary);
-            });
+            //Task.Run(delegate
+            //{
+            //   ServerCommunication.PostLocalPlayerData(__instance, dictionary);
+            //});
         }
 
         public static void MoveReplicated(EFT.Player player, Dictionary<string, object> dict)
