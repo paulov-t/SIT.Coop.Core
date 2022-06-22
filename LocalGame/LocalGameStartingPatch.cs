@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using CoopTarkovGameServer;
 using System.Collections.Concurrent;
+using BepInEx.Configuration;
 
 namespace SIT.Coop.Core.LocalGame
 {
@@ -21,6 +22,15 @@ namespace SIT.Coop.Core.LocalGame
     public class LocalGameStartingPatch : ModulePatch
     {
         public static EchoGameServer gameServer;
+        private static ConfigFile _config;
+
+        private static LocalGameSpawnAICoroutinePatch gameSpawnAICoroutinePatch;
+
+        public LocalGameStartingPatch(ConfigFile config)
+        {
+            _config = config;
+            gameSpawnAICoroutinePatch = new SIT.Coop.Core.LocalGame.LocalGameSpawnAICoroutinePatch(_config);
+        }
 
         protected override MethodBase GetTargetMethod()
         {
@@ -66,7 +76,11 @@ namespace SIT.Coop.Core.LocalGame
             Logger.LogInfo($"LocalGameStartingPatch:PatchPrefix");
             LocalGamePatches.LocalGameInstance = __instance;
             //new LocalGameStartBotSystemPatch().Enable();
-            new SIT.Coop.Core.LocalGame.LocalGameSpawnAICoroutinePatch().Enable();
+
+
+
+            //new SIT.Coop.Core.LocalGame.LocalGameSpawnAICoroutinePatch(_config).Enable();
+            gameSpawnAICoroutinePatch.Enable();
             new LocalGameBotWaveSystemPatch().Enable();
 
             await StartAndConnectToServer(__instance);

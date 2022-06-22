@@ -80,6 +80,7 @@ namespace SIT.Coop.Core.LocalGame
 
                 gameWorld = Singleton<GameWorld>.Instance;
                 coopGameComponent = gameWorld.GetOrAddComponent<CoopGameComponent>();
+                CoopGameComponent.Players.Clear();
                 // TODO: Shouldnt this be a member variable, not static?
                 CoopGameComponent.Players.TryAdd(PatchConstants.GetPlayerProfileAccountId(profile), p);
 

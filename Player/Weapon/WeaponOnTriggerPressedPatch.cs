@@ -44,7 +44,7 @@ namespace SIT.Coop.Core.Player.Weapon
             dictionary.Add("pressed", pressed);
             dictionary.Add("m", "SetTriggerPressed");
 
-            var player = PatchConstants.GetAllFieldsForObject(__instance).Single(x => x.Name == "_player").GetValue(__instance);
+            var player = PatchConstants.GetAllFieldsForObject(__instance).First(x => x.Name == "_player").GetValue(__instance);
             ServerCommunication.PostLocalPlayerData(player, dictionary);
         }
     }

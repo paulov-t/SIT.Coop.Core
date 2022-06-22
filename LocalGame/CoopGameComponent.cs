@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using SIT.Coop.Core.Matchmaker;
 using SIT.Coop.Core.Player;
 using SIT.Tarkov.Core;
+using SIT.Tarkov.Core.AI;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -52,20 +53,20 @@ namespace SIT.Coop.Core.LocalGame
 				if (Players != null && Players.ContainsKey(accountId))
 					return Players[accountId] as EFT.LocalPlayer;
 
-				var allPlayers = FindObjectsOfType<EFT.LocalPlayer>();
-				if (allPlayers != null)
-				{
-					var player = allPlayers.FirstOrDefault(x => x.Profile.AccountId == accountId);
-					if (player == null)
-					{
-						//PatchConstants.Logger.LogInfo($"Unable to find Profile of {accountId}");
-						return null;
-					}
+				//var allPlayers = FindObjectsOfType<EFT.LocalPlayer>();
+				//if (allPlayers != null)
+				//{
+				//	var player = allPlayers.FirstOrDefault(x => x.Profile.AccountId == accountId);
+				//	if (player == null)
+				//	{
+				//		//PatchConstants.Logger.LogInfo($"Unable to find Profile of {accountId}");
+				//		return null;
+				//	}
 
-					PatchConstants.Logger.LogInfo($"Adding Profile of {accountId} to Players list");
-					Players.TryAdd(accountId, player);
-					return player;
-				}
+				//	PatchConstants.Logger.LogInfo($"Adding Profile of {accountId} to Players list");
+				//	Players.TryAdd(accountId, player);
+				//	return player;
+				//}
 			}
 			catch (Exception)
             {
@@ -192,14 +193,14 @@ namespace SIT.Coop.Core.LocalGame
 		}
 
 
-		public static ConcurrentDictionary<string, EFT.LocalPlayer> Players = new ConcurrentDictionary<string, EFT.LocalPlayer>();
+		public static ConcurrentDictionary<string, EFT.LocalPlayer> Players { get; } = new ConcurrentDictionary<string, EFT.LocalPlayer>();
 
-		public static ConcurrentDictionary<string, ConcurrentQueue<Dictionary<string, object>>> ClientQueuedActions = new ConcurrentDictionary<string, ConcurrentQueue<Dictionary<string, object>>>();
+		public static ConcurrentDictionary<string, ConcurrentQueue<Dictionary<string, object>>> ClientQueuedActions { get; } = new ConcurrentDictionary<string, ConcurrentQueue<Dictionary<string, object>>>();
 
 
 		void RunQueuedActions()
 		{
-			Task.Run(() =>
+			//Task.Run(() =>
 			{
 				if (ClientQueuedActions == null)
 					return;
@@ -263,8 +264,8 @@ namespace SIT.Coop.Core.LocalGame
 										PatchConstants.Logger.LogInfo("Door");
 										break;
 									case "Move":
-										//PlayerOnMovePatch.MoveReplicated(player, dictionary);
-										break;
+                                        PlayerOnMovePatch.MoveReplicated(player, dictionary);
+                                        break;
 									case "Rotate":
 										//PatchConstants.Logger.LogInfo("Rotate");
 										//PlayerOnRotatePatch.RotateReplicated(player, dictionary);
@@ -286,7 +287,8 @@ namespace SIT.Coop.Core.LocalGame
 
 					}
 				}
-			});
+				//});
+			}
 		}
 
 		DateTime? LastParityCheck = DateTime.Now;
@@ -546,6 +548,7 @@ namespace SIT.Coop.Core.LocalGame
 										QuickLog($"Added new Player {newPlayerToSpawn.Item1.AccountId} to Players");
 										if (MatchmakerAcceptPatches.IsServer)
 										{
+											BotSystemHelpers.AddActivePlayer(result);
 											//CoopImplementation.ClientPlayers.TryAdd(newPlayerToSpawn.Item1.AccountId, result);
 										}
 										//this.SetWeaponInHandsOfNewPlayer(result);

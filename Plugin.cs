@@ -23,7 +23,7 @@ namespace SIT.Coop.Core
 
             UDPPort = Config.Bind<int>("Server", "Port", 7070).Value;
 
-            new LocalGameStartingPatch().Enable();
+            new LocalGameStartingPatch(Config).Enable();
 
 
             // ------ SPAWN --------------------------

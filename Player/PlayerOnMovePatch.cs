@@ -54,7 +54,9 @@ namespace SIT.Coop.Core.Player
                 return;
 
             Dictionary<string, object> dictionary = new Dictionary<string, object>();
-            dictionary.Add("nP", __instance.Transform.position.ToJson());
+            dictionary.Add("nPx", __instance.Transform.position.x);
+            dictionary.Add("nPy", __instance.Transform.position.y);
+            dictionary.Add("nPz", __instance.Transform.position.z);
             dictionary.Add("dX", direction.x.ToString());
             dictionary.Add("dY", direction.y.ToString());
             dictionary.Add("vel", __instance.MovementContext.Velocity);
@@ -63,16 +65,19 @@ namespace SIT.Coop.Core.Player
             dictionary.Add("mdY", __instance.MovementContext.MovementDirection.y);
             dictionary.Add("sprint", __instance.MovementContext.IsSprintEnabled);
             dictionary.Add("m", "Move");
-            //Task.Run(delegate
-            //{
-            //   ServerCommunication.PostLocalPlayerData(__instance, dictionary);
-            //});
+            Task.Run(delegate
+            {
+                ServerCommunication.PostLocalPlayerData(__instance, dictionary);
+            });
         }
 
         public static void MoveReplicated(EFT.Player player, Dictionary<string, object> dict)
         {
-            var newPos = JsonConvert.DeserializeObject<Vector3>(dict["nP"].ToString());
-            player.Teleport(newPos);
+            var newPos = Vector3.zero;
+            newPos.x = float.Parse(dict["nPx"].ToString());
+            newPos.y = float.Parse(dict["nPy"].ToString());
+            newPos.z = float.Parse(dict["nPz"].ToString());
+            player.Transform.position = newPos;
             //try
             //{
             //    Vector2 direction = new Vector2(float.Parse(dict["dX"].ToString()), float.Parse(dict["dY"].ToString()));
