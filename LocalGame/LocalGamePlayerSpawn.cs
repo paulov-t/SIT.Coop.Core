@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using static SIT.Coop.Core.LocalGame.LocalGamePatches;
+using SIT.Coop.Core.Player;
 
 namespace SIT.Coop.Core.LocalGame
 {
@@ -83,6 +84,8 @@ namespace SIT.Coop.Core.LocalGame
                 CoopGameComponent.Players.Clear();
                 // TODO: Shouldnt this be a member variable, not static?
                 CoopGameComponent.Players.TryAdd(PatchConstants.GetPlayerProfileAccountId(profile), p);
+                var prc = p.GetOrAddComponent<PlayerReplicatedComponent>();
+                prc.player = p;
 
 
                 Dictionary<string, object> dictionary2 = new Dictionary<string, object>

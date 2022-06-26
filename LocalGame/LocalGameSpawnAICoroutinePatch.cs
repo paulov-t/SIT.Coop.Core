@@ -1,6 +1,7 @@
 ﻿using BepInEx.Configuration;
 using Comfort.Common;
 using EFT;
+using SIT.Coop.Core.Player;
 using SIT.Tarkov.Core;
 using SIT.Tarkov.Core.AI;
 using System;
@@ -226,17 +227,24 @@ namespace SIT.Coop.Core.LocalGame
 
             if (CoopGameComponent.Players.Count >= maxCountOfBots) 
             {
-                Logger.LogInfo($"BotCreationMethod. CoopGameComponent.Players is full");
+                Logger.LogInfo($"BotCreationMethod. [ERROR] CoopGameComponent.Players is full");
+                return null;
+            }
+
+            if (CoopGameComponent.Players.ContainsKey(profile.AccountId))
+            {
+                Logger.LogInfo($"BotCreationMethod. [ERROR] Bot already exists");
                 return null;
             }
 
             // TODO: Rewrite the following method into into BotCreationMethod
             var player = await (Task<LocalPlayer>)PatchConstants.GetMethodForType(LocalGamePatches.LocalGameInstance.GetType().BaseType, "method_8")
-                .Invoke(LocalGamePatches.LocalGameInstance, new object[] { profile, position });
+            .Invoke(LocalGamePatches.LocalGameInstance, new object[] { profile, position });
 
-            Logger.LogInfo($"BotCreationMethod. Adding {profile.AccountId} to CoopGameComponent.Players list");
+            var prc = player.GetOrAddComponent<PlayerReplicatedComponent>();
+            prc.player = player;
             CoopGameComponent.Players.TryAdd(profile.AccountId, player);
-
+            Logger.LogInfo($"BotCreationMethod. [SUCCESS] Adding {profile.AccountId} to CoopGameComponent.Players list");
             return player;
         }
     }

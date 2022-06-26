@@ -79,8 +79,8 @@ namespace SIT.Coop.Core.Web
 			PatchConstants.Logger.LogInfo("GetUdpClient::Game Server IP is " + backendUrlIp);
 
 			UdpClient udpClient = new UdpClient(backendUrlIp, (reliable ? udpServerPort + 1 : udpServerPort));
-			udpClient.Client.SendBufferSize = 50;
-			udpClient.Client.ReceiveBufferSize = 50;
+			udpClient.Client.SendBufferSize = 16384;
+			udpClient.Client.ReceiveBufferSize = 16384;
 			udpClient.Client.ReceiveTimeout = 0;
 			udpClient.Client.SendTimeout = 0;
 			udpClient.BeginReceive(ReceiveUdp, udpClient);
@@ -125,9 +125,13 @@ namespace SIT.Coop.Core.Web
 		public static Dictionary<string, object> PostLocalPlayerData(object player, Dictionary<string, object> data, bool useReliable = false)
 		{
 			var profile = PatchConstants.GetPlayerProfile(player);
-			if (!data.ContainsKey("groupId"))
+			//if (!data.ContainsKey("groupId"))
+			//{
+			//	data.Add("groupId", MatchmakerAcceptPatches.GetGroupId());
+			//}
+			if (!data.ContainsKey("t"))
 			{
-				data.Add("groupId", MatchmakerAcceptPatches.GetGroupId());
+				data.Add("t", DateTime.Now.Ticks);
 			}
 			//if (!data.ContainsKey("profileId"))
 			//{

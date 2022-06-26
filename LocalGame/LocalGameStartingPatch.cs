@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using CoopTarkovGameServer;
 using System.Collections.Concurrent;
 using BepInEx.Configuration;
+using SIT.Coop.Core.Player;
 
 namespace SIT.Coop.Core.LocalGame
 {
@@ -200,15 +201,21 @@ namespace SIT.Coop.Core.LocalGame
                                     var dictionary = JsonConvert.DeserializeObject<Dictionary<string, object>>(@string);
                                     if (dictionary != null && dictionary.Count > 0 && dictionary.ContainsKey("accountId"))
                                     {
-                                        if (dictionary.ContainsKey("m") && !dictionary.ContainsKey("method"))
-                                            dictionary.Add("method", dictionary["m"]);
+                                        var player = CoopGameComponent.GetPlayerByAccountId(dictionary["accountId"].ToString());
+                                        if (player != null)
+                                        {
+                                            player.GetOrAddComponent<PlayerReplicatedComponent>().QueuedPackets.Enqueue(dictionary);
+                                        }
 
-                                        var method = dictionary["method"].ToString();
+                                        //if (dictionary.ContainsKey("m") && !dictionary.ContainsKey("method"))
+                                        //    dictionary.Add("method", dictionary["m"]);
 
-                                        //Logger.LogInfo($"LocalGameStartingPatch:OnDataReceived:{method}");
+                                        //var method = dictionary["method"].ToString();
 
-                                        CoopGameComponent.ClientQueuedActions.TryAdd(method, new ConcurrentQueue<Dictionary<string, object>>());
-                                        CoopGameComponent.ClientQueuedActions[method].Enqueue(dictionary);
+                                        ////Logger.LogInfo($"LocalGameStartingPatch:OnDataReceived:{method}");
+
+                                        //CoopGameComponent.ClientQueuedActions.TryAdd(method, new ConcurrentQueue<Dictionary<string, object>>());
+                                        //CoopGameComponent.ClientQueuedActions[method].Enqueue(dictionary);
                                     }
                                 }
                                 //if (@string.IndexOf('[') == 0 && @string.EndsWith("]"))

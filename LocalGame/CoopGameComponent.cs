@@ -1,5 +1,6 @@
 ﻿using EFT;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using SIT.Coop.Core.Matchmaker;
 using SIT.Coop.Core.Player;
 using SIT.Tarkov.Core;
@@ -43,7 +44,7 @@ namespace SIT.Coop.Core.LocalGame
 			//((MonoBehaviour)this).InvokeRepeating("RunParityCheck", 0, 1f);
 		}
 
-		private EFT.LocalPlayer GetPlayerByAccountId(string accountId)
+		public static EFT.LocalPlayer GetPlayerByAccountId(string accountId)
 		{
 			try
 			{
@@ -51,7 +52,7 @@ namespace SIT.Coop.Core.LocalGame
 					return LocalGamePatches.MyPlayer as EFT.LocalPlayer;
 
 				if (Players != null && Players.ContainsKey(accountId))
-					return Players[accountId] as EFT.LocalPlayer;
+					return Players[accountId];
 
 				//var allPlayers = FindObjectsOfType<EFT.LocalPlayer>();
 				//if (allPlayers != null)
@@ -78,6 +79,11 @@ namespace SIT.Coop.Core.LocalGame
 
 		private readonly ConcurrentDictionary<string, (Profile, Vector3, ESpawnState)> PlayersToSpawn = new ConcurrentDictionary<string, (Profile, Vector3, ESpawnState)>();
 
+		/// <summary>
+		/// Player, Time spawned -> Handled by UpdateAddPlayersToAICalc
+		/// </summary>
+		private readonly List<(EFT.LocalPlayer, DateTime)> PlayersToAddActivePlayerToAI = new List<(EFT.LocalPlayer, DateTime)>();
+
 		private readonly ConcurrentDictionary<string, string> AccountsLoading = new ConcurrentDictionary<string, string>();
 
 		private void DataReceivedClient_PlayerBotSpawn(Dictionary<string, object> parsedDict, string accountId, string profileId, Vector3 newPosition, bool isBot)
@@ -103,6 +109,9 @@ namespace SIT.Coop.Core.LocalGame
 					profile.Info.Side = isBot ? EPlayerSide.Savage : EPlayerSide.Usec;
 					if (parsedDict.ContainsKey("p.info"))
 					{
+						var jobInfo = JObject.Parse(parsedDict["p.info"].ToString());
+						profile.Info.Nickname = jobInfo.Property("Nickname").Value.ToString();
+						profile.Info.Side = (EPlayerSide)Enum.Parse(typeof(EPlayerSide), jobInfo.Property("Side").Value.ToString());
 						//var info = parsedDict["p.info"].ToString().ParseJsonTo<GClass1443>(Array.Empty<JsonConverter>());
 						//if (info != null)
 						//{
@@ -193,9 +202,13 @@ namespace SIT.Coop.Core.LocalGame
 		}
 
 
+		public static ConcurrentDictionary<string, EFT.LocalPlayer> OldPlayers { get; } = new ConcurrentDictionary<string, EFT.LocalPlayer>();
 		public static ConcurrentDictionary<string, EFT.LocalPlayer> Players { get; } = new ConcurrentDictionary<string, EFT.LocalPlayer>();
 
 		public static ConcurrentDictionary<string, ConcurrentQueue<Dictionary<string, object>>> ClientQueuedActions { get; } = new ConcurrentDictionary<string, ConcurrentQueue<Dictionary<string, object>>>();
+
+		public static ConcurrentDictionary<EFT.LocalPlayer, Dictionary<string, object>> ServerReliablePackets { get; } 
+			= new ConcurrentDictionary<EFT.LocalPlayer, Dictionary<string, object>>();
 
 
 		void RunQueuedActions()
@@ -219,9 +232,9 @@ namespace SIT.Coop.Core.LocalGame
 							if (value == null)
 								continue;
 
-							//while (value.Any())
-							if (value.Any())
-							{
+                            while (value.Any())
+                            //if (value.Any())
+                            {
 								bool dequeued = value.TryDequeue(out Dictionary<string, object> dictionary);
 								if (!dequeued)
 									continue;
@@ -240,44 +253,49 @@ namespace SIT.Coop.Core.LocalGame
 								if (player == null)
 									continue;
 
+								player.GetOrAddComponent<PlayerReplicatedComponent>().QueuedPackets.Enqueue(dictionary);
+
 								EBodyPart eBodyPart = EBodyPart.Common;
 								if (dictionary.ContainsKey("bodyPart"))
 									eBodyPart = (EBodyPart)Enum.Parse(typeof(EBodyPart), dictionary["bodyPart"].ToString());
 
 								var method = dictionary["m"].ToString();
-								if (
-									(accountid == LocalGamePatches.MyPlayerProfile.AccountId || (Matchmaker.MatchmakerAcceptPatches.IsServer && player.IsAI))
-									&& !MethodsToReplicateToMyPlayer.Contains(method))
-									continue;
+								//if (
+								//	(accountid == LocalGamePatches.MyPlayerProfile.AccountId || (Matchmaker.MatchmakerAcceptPatches.IsServer && player.IsAI))
+								//	&& !MethodsToReplicateToMyPlayer.Contains(method))
+								//	continue;
 
 
-								switch (method)
-								{
-									case "Damage":
-										//PatchConstants.Logger.LogInfo("Damage");
-										PlayerOnDamagePatch.DamageReplicated(player, dictionary);
-										break;
-									case "Dead":
-										PatchConstants.Logger.LogInfo("Dead");
-										break;
-									case "Door":
-										PatchConstants.Logger.LogInfo("Door");
-										break;
-									case "Move":
-                                        PlayerOnMovePatch.MoveReplicated(player, dictionary);
-                                        break;
-									case "Rotate":
-										//PatchConstants.Logger.LogInfo("Rotate");
-										//PlayerOnRotatePatch.RotateReplicated(player, dictionary);
-										break;
-									case "Say":
-										break;
-									case "SetTriggerPressed":
-										break;
-									case "SetItemsInHands":
-										break;
+								//switch (method)
+								//{
+								//	case "Damage":
+								//		//PatchConstants.Logger.LogInfo("Damage");
+								//		PlayerOnDamagePatch.DamageReplicated(player, dictionary);
+								//		break;
+								//	case "Dead":
+								//		PatchConstants.Logger.LogInfo("Dead");
+								//		break;
+								//	case "Door":
+								//		PatchConstants.Logger.LogInfo("Door");
+								//		break;
+								//	//case "Move":
+        // //                               PlayerOnMovePatch.MoveReplicated(player, dictionary);
+        // //                               break;
+								//	case "Rotate":
+        //                                //PatchConstants.Logger.LogInfo("Rotate");
+        //                                PlayerOnRotatePatch.RotateReplicated(player, dictionary);
+        //                                break;
+								//	case "Say":
+								//		break;
+								//	case "SetTriggerPressed":
+								//		break;
+								//	case "SetItemsInHands":
+								//		break;
+								//	case "InventoryOpened":
+								//		PlayerOnInventoryOpenedPatch.InventoryOpenedReplicated(player, dictionary);
+								//		break;
 
-								}
+								//}
 							}
 						}
 					}
@@ -417,15 +435,15 @@ namespace SIT.Coop.Core.LocalGame
 						//this.QuickLog("ParityCheck::Data Received from Central Server::" + text.Length);
 						if (dictionary.ContainsKey("players"))
 						{
-							List<Dictionary<string, object>> list3 = dictionary["players"].ToJson().ParseJsonTo<List<Dictionary<string, object>>>(Array.Empty<JsonConverter>());
-							if (list3 != null)
+							List<Dictionary<string, object>> returnedPlayers = dictionary["players"].ToJson().ParseJsonTo<List<Dictionary<string, object>>>(Array.Empty<JsonConverter>());
+							if (returnedPlayers != null)
 							{
 								//this.QuickLog("ParityCheck::Data Received from Central Server::PlayerListData::Count::" + list3.Count);
 								//foreach (var item in list3)
 								//{
 								//	QuickLog(string.Join(", ", item.Keys));
 								//}
-								foreach (var item in list3)
+								foreach (var item in returnedPlayers)
 								{
 									if (item == null)
 										continue;
@@ -434,6 +452,9 @@ namespace SIT.Coop.Core.LocalGame
 									{
 										string accountId = item["accountId"].ToString();
 										if (Players == null || Players.Count == 0)
+											continue;
+
+										if (OldPlayers.ContainsKey(accountId))
 											continue;
 
 										Vector3 newPosition = Players.First().Value.Position;
@@ -498,11 +519,11 @@ namespace SIT.Coop.Core.LocalGame
 							var loadTask = SIT.A.Tarkov.Core.Plugin.LoadBundlesAndCreatePools(allPrefabPaths.ToArray());
 							if (loadTask != null)
 							{
-								// TODO: Get this working
-                                //loadTask.ContinueWith(delegate
-                                //{
-                                //	newPlayerToSpawn.Item3 = ESpawnState.Loaded;
-                                //});
+                                // TODO: Get this working
+                                loadTask.ContinueWith(delegate
+                                {
+                                    //	newPlayerToSpawn.Item3 = ESpawnState.Loaded;
+                                });
                                 //loadTask.GetAwaiter().OnCompleted(() => {
                                 //	newPlayerToSpawn.Item3 = ESpawnState.Loaded;
                                 //});
@@ -537,20 +558,13 @@ namespace SIT.Coop.Core.LocalGame
 								{
 									newPlayerToSpawn.Item3 = ESpawnState.Spawned;
 
-									if (MatchmakerAcceptPatches.IsServer)
-									{
-										//this.gclass1220_0.AddActivePLayer(result);
-										SIT.Tarkov.Core.AI.BotSystemHelpers.AddActivePlayer(result);
-									}
-
 									if (Players.TryAdd(newPlayerToSpawn.Item1.AccountId, result))
 									{
 										QuickLog($"Added new Player {newPlayerToSpawn.Item1.AccountId} to Players");
-										if (MatchmakerAcceptPatches.IsServer)
-										{
-											BotSystemHelpers.AddActivePlayer(result);
-											//CoopImplementation.ClientPlayers.TryAdd(newPlayerToSpawn.Item1.AccountId, result);
-										}
+										var prc = result.GetOrAddComponent<PlayerReplicatedComponent>();
+										prc.player = result;
+										PlayersToAddActivePlayerToAI.Add((result, DateTime.Now));
+										
 										//this.SetWeaponInHandsOfNewPlayer(result);
 									}
 									else
@@ -597,11 +611,29 @@ namespace SIT.Coop.Core.LocalGame
 				doingclientwork = true;
 				UpdateParityCheck();
                 UpdateClientSpawnPlayers();
-                RunQueuedActions();
+				UpdateAddPlayersToAICalc();
+				RunQueuedActions();
+
                 doingclientwork = false;
 			}
 		}
 
+		void UpdateAddPlayersToAICalc()
+        {
+            if (PlayersToAddActivePlayerToAI.Any())
+            {
+				List<string> playersRemoved = new List<string>();
+				foreach (var p in PlayersToAddActivePlayerToAI)
+                {
+					if(p.Item2 < DateTime.Now.AddSeconds(-10))
+                    {
+						BotSystemHelpers.AddActivePlayer(p.Item1);
+						playersRemoved.Add(p.Item1.Profile.AccountId);
+					}
+                }
+				PlayersToAddActivePlayerToAI.RemoveAll(x => playersRemoved.Contains(x.Item1.Profile.AccountId));
+			}
+        }
 
 
 		private BepInEx.Logging.ManualLogSource logSource;

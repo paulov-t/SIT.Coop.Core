@@ -114,23 +114,26 @@ namespace CoopTarkovGameServer
                 //    UPnP.NAT.ForwardPort(newPort, ProtocolType.Udp, "SIT-Tarkov-" + i);
                 //}
 
-                var udpReceiver = new UdpClient(newPort);
-                AddToLog(this.GetType() + ": Started udp receiver on Port " + newPort);
+                //var udpReceiver = new UdpClient(newPort);
+                
+                var newIpEndPoint = new IPEndPoint(IPAddress.Any, newPort);
+                var udpReceiver = new UdpClient(newIpEndPoint);
+                AddToLog(this.GetType() + ": Started udp receiver " + newIpEndPoint.ToString());
                 //udpReceiver.AllowNatTraversal(true);
                 //udpReceiver.DontFragment = true;
                 //udpReceiver.DontFragment = false;
                 udpReceiver.Client.SendTimeout = 500; // defaulted min
                 udpReceiver.Client.ReceiveTimeout = 500; // defaulted min
-                const int SIO_UDP_CONNRESET = -1744830452;
-                udpReceiver.Client.IOControl(
-                    (IOControlCode)SIO_UDP_CONNRESET,
-                    new byte[] { 0, 0, 0, 0 },
-                    null
-                );
+                //const int SIO_UDP_CONNRESET = -1744830452;
+                //udpReceiver.Client.IOControl(
+                //    (IOControlCode)SIO_UDP_CONNRESET,
+                //    new byte[] { 0, 0, 0, 0 },
+                //    null
+                //);
                 //udpReceiver.Client.ReceiveBufferSize = 50;
                 //udpReceiver.Client.SendBufferSize = 300;
-                udpReceiver.Client.ReceiveBufferSize = 300;
-                udpReceiver.Client.SendBufferSize = 300;
+                udpReceiver.Client.ReceiveBufferSize = 16384;
+                udpReceiver.Client.SendBufferSize = 16384;
               
                 udpReceiver.BeginReceive(UdpReceive, udpReceiver);
          
@@ -385,13 +388,26 @@ namespace CoopTarkovGameServer
                         return;
                     }
 
+                    if (udpReceivers.Count == 0)
+                    {
+                        AddToLog("There are no udpReceivers!!!");
+                        return;
+                    }
+
                     AddNewConnection(receivedIpEndPoint, null);
+                    if (ConnectedClients.Count == 0)
+                    {
+                        AddToLog("There are no ConnectedClients!!!");
+                        return;
+                    }
+
                     foreach (var client in ConnectedClients.Keys)
                     {
+                        
                         foreach (var udpServer in udpReceivers)
                         {
-                            _ = udpServer.SendAsync(array, array.Length, client);
-                            //udp.Send(new ReadOnlySpan<byte>(array));
+                            //_ = udpServer.SendAsync(array, array.Length, client);
+                            udpServer.Send(array, array.Length, client);
                             //udp.BeginSend(array, array.Length, (IAsyncResult r) => { }, client);
                         }
                     }

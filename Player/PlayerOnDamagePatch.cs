@@ -131,8 +131,8 @@ namespace SIT.Coop.Core.Player
 
             float currentBodyPartHealth = HealthControllerHelpers.GetBodyPartHealth(ActiveHealthController, bodyPart).Current;
 
-            Logger.LogInfo($"ClientApplyDamageInfo::Damage = {damage}");
-            Logger.LogInfo($"ClientApplyDamageInfo::{bodyPart} current health [before] = {currentBodyPartHealth}");
+            //Logger.LogInfo($"ClientApplyDamageInfo::Damage = {damage}");
+            //Logger.LogInfo($"ClientApplyDamageInfo::{bodyPart} current health [before] = {currentBodyPartHealth}");
 
             try
             {
@@ -155,7 +155,7 @@ namespace SIT.Coop.Core.Player
             //// get the health again
             currentBodyPartHealth = HealthControllerHelpers.GetBodyPartHealth(ActiveHealthController, bodyPart).Current;
             //currentBodyPartHealth = ActiveHealthController.GetBodyPartHealth(bodyPartType).Current;
-            Logger.LogInfo($"ClientApplyDamageInfo::{bodyPart} current health [after] = {currentBodyPartHealth}");
+            //Logger.LogInfo($"ClientApplyDamageInfo::{bodyPart} current health [after] = {currentBodyPartHealth}");
             //UnityEngine.Debug.LogError($"ClientApplyDamageInfo::{bodyPartType} current health [after] = {currentBodyPartHealth}");
 
             //if (currentBodyPartHealth == 0)
@@ -171,7 +171,7 @@ namespace SIT.Coop.Core.Player
             var currentOVRHealth = HealthControllerHelpers.GetBodyPartHealth(ActiveHealthController, EBodyPart.Common).Current;
             if (currentOVRHealth == 0)
             {
-                UnityEngine.Debug.LogError($"ClientApplyDamageInfo::Common Health, killing");
+                //UnityEngine.Debug.LogError($"ClientApplyDamageInfo::Common Health, killing");
 
                 PatchConstants.GetAllMethodsForObject(ActiveHealthController).Single(x => x.Name == "Kill").Invoke(ActiveHealthController, new object[] { damageType });
             }

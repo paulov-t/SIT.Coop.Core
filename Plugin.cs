@@ -31,6 +31,7 @@ namespace SIT.Coop.Core
 
             // ------ PLAYER -------------------------
             new PlayerOnDamagePatch().Enable();
+            new PlayerOnDeadPatch(Config).Enable();
             new PlayerOnDropBackpackPatch().Enable();
             new PlayerOnGesturePatch().Enable();
             new PlayerOnHealPatch().Enable();
