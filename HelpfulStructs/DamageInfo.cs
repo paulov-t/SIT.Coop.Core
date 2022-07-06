@@ -74,7 +74,8 @@ namespace SIT.Coop.Core.HelpfulStructs
 			}
 		}
 
-		//public DamageInfo(EDamageType damageType, GClass2272 shot)
+		//public DamageInfo(EDamageType damageType,
+		//2272 shot)
 		//{
 		//	this.DamageType = damageType;
 		//	this.Damage = shot.Damage;

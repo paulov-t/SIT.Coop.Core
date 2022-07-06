@@ -88,14 +88,11 @@ namespace SIT.Coop.Core.LocalGame
             if (!Matchmaker.MatchmakerAcceptPatches.IsClient)
             {
                 CoopGameComponent.Players.Clear();
-                // TODO: Make this not directly go for GClass1226_0
-                //var nonSpawnWaveShit = PatchConstants.GetFieldOrPropertyFromInstance<object>(LocalGamePatches.LocalGameInstance, "GClass1226_0", false);
                 var nonSpawnWaveShit = PatchConstants.GetFieldOrPropertyFromInstance<object>(
                     LocalGamePatches.LocalGameInstance
                     , BotSystemHelpers.RoleLimitDifficultyType.Name + "_0"
                     , false);
-                // TODO: Make this not directly go for GClass1036_0
-                var openZones = PatchConstants.GetFieldOrPropertyFromInstance<object>(LocalGamePatches.LocalGameInstance, "GClass1036_0", false);
+                var openZones = PatchConstants.GetFieldOrPropertyFromInstance<object>(LocalGamePatches.LocalGameInstance, BotSystemHelpers.LocationBaseType.Name + "_0", false);
                 var openZones2 = PatchConstants.GetFieldOrPropertyFromInstance<string>(openZones, "OpenZones", false);
 
                 // Construct Profile Creator
@@ -113,9 +110,7 @@ namespace SIT.Coop.Core.LocalGame
                     BotSystemHelpers.BotCreatorType
                     , LocalGamePatches.LocalGameInstance
                     , profileCreator
-                    // TODO: Do NOT reference method_8 (its been method_8 since I started this but always expect it to change) and create my own Bot Creator
                     ,
-                    //PatchConstants.GetMethodForType(LocalGamePatches.LocalGameInstance.GetType().BaseType, "method_8", true).CreateDelegate(LocalGamePatches.LocalGameInstance)
                     PatchConstants.GetMethodForType(typeof(LocalGameSpawnAICoroutinePatch), "BotCreationMethod").CreateDelegate(LocalGamePatches.LocalGameInstance)
 
                     );
@@ -178,31 +173,22 @@ namespace SIT.Coop.Core.LocalGame
                 yield return new WaitForSeconds(1);
 
                 runCallback.Succeed();
-                //yield return new WaitForSeconds(30);
-                //___wavesSpawnScenario_0.Stop();
             }
             else 
             {
-                //___gclass1222_0.SetSettings(0, new GClass1051[0], new GClass500[0]);
                 BotSystemHelpers.SetSettingsNoBots();
                 try
                 {
                     BotSystemHelpers.Stop();
-                    //___gclass1222_0.Stop();
                 }
                 catch
                 {
 
                 }
-                //yield return new WaitForSeconds(startDelay);
                 yield return new WaitForSeconds(1);
-                //___gclass543_0.Run();
-                //using (GClass19.StartWithToken("SessionRun"))
                 using (PatchConstants.StartWithToken("SessionRun"))
                 {
-                    //this.vmethod_4();
                     // TODO: This needs removing!
-                    //PatchConstants.GetMethodForType(__instance.GetType(), "vmethod_4").Invoke(__instance, new object[0]);
                     PatchConstants.GetMethodForType(LocalGamePatches.LocalGameInstance.GetType(), "vmethod_4").Invoke(LocalGamePatches.LocalGameInstance, new object[0]);
                 }
                 runCallback.Succeed();

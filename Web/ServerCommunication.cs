@@ -49,11 +49,14 @@ namespace SIT.Coop.Core.Web
 			if (ServerCommunication.CommunicationError || MatchmakerAcceptPatches.IsSinglePlayer)
 				return null;
 
-			if (!reliable && udpClients.Any())
+			if (udpClients.Any())
 				return udpClients[0];
 
-			if (reliable && udpClients.Count > 1)
-				return udpClients[1];
+			//if (!reliable && udpClients.Any())
+			//	return udpClients[0];
+
+			//if (reliable && udpClients.Count > 1)
+			//	return udpClients[1];
 
 			// TODO: Get the game server ip properly!
 			Dictionary<string, string> dataDict = new Dictionary<string, string>();

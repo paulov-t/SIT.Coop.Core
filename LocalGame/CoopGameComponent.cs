@@ -122,7 +122,15 @@ namespace SIT.Coop.Core.LocalGame
 					}
 					if (parsedDict.ContainsKey("p.cust"))
 					{
-						//profile.Customization = parsedDict["p.cust"].ToString().ParseJsonTo<GClass1437>(Array.Empty<JsonConverter>());
+						var parsedCust = parsedDict["p.cust"].ToString().ParseJsonTo<Dictionary<EBodyModelPart, string>>(Array.Empty<JsonConverter>());
+						if (parsedCust != null && parsedCust.Any()) 
+						{
+							PatchConstants.SetFieldOrPropertyFromInstance(
+								profile
+								, "Customization"
+								, Activator.CreateInstance(PatchConstants.TypeDictionary["Profile.Customization"], parsedCust)
+								);
+						}
 					}
 					if (parsedDict.ContainsKey("p.equip"))
 					{
@@ -170,27 +178,76 @@ namespace SIT.Coop.Core.LocalGame
 				//int playerId = int.Parse(InvokeLocalGameInstanceMethod("method_13").ToString());
 				int playerId = Players.Count + 1;
 				profile.SetSpawnedInSession(true);
-				var localPlayer = await LocalPlayer.Create(playerId
-					, position
-					, Quaternion.identity
-					, "Player"
-					, ""
-					, EPointOfView.ThirdPerson
-					, profile
-					, false
-					, EUpdateQueue.Update //PatchConstants.GetAllPropertiesForObject(LocalGameInstance).FirstOrDefault(x=>x.Name == "UpdateQueue").GetValue(LocalGameInstance)
-					, armsUpdateMode
-					, bodyUpdateMode
-                    , GClass523.Config.CharacterController.ClientPlayerMode // TODO: Make this dynamic/reflected
-                    //, CharacterControllerMode
-                    , () => 1f
-					, () => 1f
-					, 0
-					, new GClass1478()
-					, GClass1206.Default
-					, null
-					, false);
-				return localPlayer;
+
+				/* TODO. Do this shit next private static async Task<object> CallGetByReflection(IFoo foo, IBar bar)
+        {
+            var method = typeof(IFoo).GetMethod(nameof(IFoo.Get));
+            var generic = method.MakeGenericMethod(bar.GetType());
+            var task = (Task) generic.Invoke(foo, new[] {bar});
+
+            await task.ConfigureAwait(false);
+
+            var resultProperty = task.GetType().GetProperty("Result");
+            return resultProperty.GetValue(task);
+        }
+				 */
+
+				var createMethod = typeof(LocalPlayer).GetMethod("Create", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+				var localPlayer = (Task<LocalPlayer>)createMethod.Invoke(
+					null,
+					//onstants.InvokeAsyncMethod(typeof(LocalPlayer), typeof(LocalPlayer), "Create",
+					new object[] {
+						playerId
+						, position
+						, Quaternion.identity
+						, "Player"
+						, ""
+						, EPointOfView.ThirdPerson
+						, profile
+						, false
+						, EUpdateQueue.Update //PatchConstants.GetAllPropertiesForObject(LocalGameInstance).FirstOrDefault(x=>x.Name == "UpdateQueue").GetValue(LocalGameInstance)
+						, armsUpdateMode
+						, bodyUpdateMode
+						//, GClass523.Config.CharacterController.ClientPlayerMode // TODO: Make this dynamic/reflected
+						, PatchConstants.CharacterControllerSettings.ClientPlayerMode
+						, () => 1f
+						, () => 1f
+						, 0
+						//, new GClass1478()
+						, Activator.CreateInstance(PatchConstants.TypeDictionary["StatisticsSession"])
+						, PatchConstants.GetFieldFromType(PatchConstants.TypeDictionary["FilterCustomization"], "Default").GetValue(null)
+						, null
+						, false
+					}
+
+					);
+
+				//typeof(LocalPlayer).GetMethod("Create").inv
+
+				//var localPlayer = await LocalPlayer.Create(playerId
+				//	, position
+				//	, Quaternion.identity
+				//	, "Player"
+				//	, ""
+				//	, EPointOfView.ThirdPerson
+				//	, profile
+				//	, false
+				//	, EUpdateQueue.Update //PatchConstants.GetAllPropertiesForObject(LocalGameInstance).FirstOrDefault(x=>x.Name == "UpdateQueue").GetValue(LocalGameInstance)
+				//	, armsUpdateMode
+				//	, bodyUpdateMode
+				//                //, GClass523.Config.CharacterController.ClientPlayerMode // TODO: Make this dynamic/reflected
+				//                , PatchConstants.CharacterControllerSettings.ClientPlayerMode // TODO: Make this dynamic/reflected
+				//															//, CharacterControllerMode
+				//	, () => 1f
+				//	, () => 1f
+				//	, 0
+				//	//, new GClass1478()
+				//	, Activator.CreateInstance(PatchConstants.TypeDictionary["StatisticsSession"])
+				//	, GClass1206.Default
+				//	, null
+				//	, false);
+				//return localPlayer;
+				return await localPlayer;
 			}
 			catch (Exception ex)
 			{
@@ -412,7 +469,7 @@ namespace SIT.Coop.Core.LocalGame
 					}
 
 				}
-				catch (Exception ex)
+				catch (Exception)
 				{
 					//QuickLog("ParityCheck::ERROR::" + ex.ToString());
 				}
@@ -519,6 +576,7 @@ namespace SIT.Coop.Core.LocalGame
 							var loadTask = SIT.A.Tarkov.Core.Plugin.LoadBundlesAndCreatePools(allPrefabPaths.ToArray());
 							if (loadTask != null)
 							{
+								loadTask.ConfigureAwait(false);
                                 // TODO: Get this working
                                 loadTask.ContinueWith(delegate
                                 {

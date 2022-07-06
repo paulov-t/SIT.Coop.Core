@@ -32,10 +32,18 @@ namespace SIT.Coop.Core.Matchmaker.MatchmakerAccept
         }
 
         [PatchPrefix]
-        private static bool PatchPrefix(ref object player, ref Vector2 position, ref SimpleContextMenu ____contextMenu)
+        private static bool PatchPrefix(ref object player, ref Vector2 position)
         {
             Logger.LogInfo("MatchmakerAcceptScreenShowContextPatch.PatchPrefix");
-            return false;
+            //return false;
+            return true;
+        }
+
+        [PatchPostfix]
+        private static void PatchPostfix(ref object player, ref Vector2 position, ref SimpleContextMenu ____contextMenu)
+        {
+            Logger.LogInfo("MatchmakerAcceptScreenShowContextPatch.PatchPostfix");
+            //____contextMenu.Show<ERaidPlayerButton>(position, this.method_12(player), null, null);
         }
     }
 }

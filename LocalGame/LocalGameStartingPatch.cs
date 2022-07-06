@@ -45,9 +45,9 @@ namespace SIT.Coop.Core.LocalGame
 
             var method = PatchConstants.GetAllMethodsForType(t)
                 .FirstOrDefault(x => x.GetParameters().Length >= 3
-                && x.GetParameters()[0].Name.Contains("botsSettings")
-                && x.GetParameters()[1].Name.Contains("entryPoint")
-                && x.GetParameters()[2].Name.Contains("backendUrl")
+                && x.GetParameters().Any(x => x.Name.Contains("botsSettings"))
+                && x.GetParameters().Any(x => x.Name.Contains("backendUrl"))
+                && x.GetParameters().Any(x => x.Name.Contains("runCallback"))
                 );
 
             //foreach(var m in PatchConstants.GetAllMethodsForType(t))

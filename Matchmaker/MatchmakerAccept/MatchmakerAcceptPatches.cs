@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using static EFT.UI.Matchmaker.MatchMakerAcceptScreen;
 //using ScreenController = EFT.UI.Matchmaker.MatchMakerAcceptScreen.GClass2426;
-using Grouping = GClass2434;
+//using Grouping = GClass2434;
 using SIT.Coop.Core.Matchmaker.MatchmakerAccept;
 using System.Reflection;
 using Newtonsoft.Json;
@@ -38,15 +38,14 @@ namespace SIT.Coop.Core.Matchmaker
     {
         public static EFT.UI.Matchmaker.MatchMakerAcceptScreen MatchMakerAcceptScreenInstance { get; set; }
 
-        public static object MatchmakerScreenController { get {
-                var screenControllerFieldInfo = MatchMakerAcceptScreenInstance.GetType().GetField("ScreenController", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
-                if (screenControllerFieldInfo != null)
+        public static object MatchmakerScreenController 
+        { 
+            get 
+            {
+                var screenController = PatchConstants.GetFieldOrPropertyFromInstance<object>(MatchMakerAcceptScreenInstance, "ScreenController", false);
+                if (screenController != null)
                 {
-                    PatchConstants.Logger.LogInfo("MatchmakerAcceptPatches.Found ScreenController FieldInfo");
-                    var screenController = screenControllerFieldInfo.GetValue(MatchMakerAcceptScreenInstance);
-
-                    if(screenController != null)
-                        PatchConstants.Logger.LogInfo("MatchmakerAcceptPatches.Found ScreenController Instance");
+                    PatchConstants.Logger.LogInfo("MatchmakerAcceptPatches.Found ScreenController Instance");
 
                     return screenController;
 

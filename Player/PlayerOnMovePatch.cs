@@ -124,15 +124,15 @@ namespace SIT.Coop.Core.Player
             if (dict.ContainsKey("sprint"))
                 enableSprint = bool.Parse(dict["sprint"].ToString());
 
-            //    player.MovementContext.EnableSprint(enableSprint && direction.y > 0.1f);
-            //    if (player.MovementContext.IsSprintEnabled)
-            //    {
-            //        player.MovementContext.SetPoseLevel(1f);
-            //        if (player.MovementContext.PoseLevel > 0.9f && player.MovementContext.SmoothedCharacterMovementSpeed >= 1f)
-            //        {
-            //            player.MovementContext.PlayerAnimatorEnableSprint(true);
-            //        }
-            //    }
+            player.MovementContext.EnableSprint(enableSprint && direction.y > 0.1f);
+            if (player.MovementContext.IsSprintEnabled)
+            {
+                player.MovementContext.SetPoseLevel(1f);
+                if (player.MovementContext.PoseLevel > 0.9f && player.MovementContext.SmoothedCharacterMovementSpeed >= 1f)
+                {
+                    player.MovementContext.PlayerAnimatorEnableSprint(true);
+                }
+            }
             //    if (dict.ContainsKey("spd"))
             //        player.MovementContext.CharacterMovementSpeed = float.Parse(dict["spd"].ToString());
             //    player.MovementContext.PlayerAnimatorEnableInert(false);
@@ -149,6 +149,10 @@ namespace SIT.Coop.Core.Player
             }
             player.InputDirection = direction;
 
+            if(Vector3.Distance(player.Position, newPos) > 1.0f || Vector3.Distance(player.Position, newPos) < -1.0f)
+            {
+                player.Transform.position = newPos;
+            }
 
             // handle rotation
             if (player.IsAI || player.Profile.AccountId == LocalGamePatches.MyPlayerProfile.AccountId)

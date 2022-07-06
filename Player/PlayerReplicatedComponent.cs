@@ -128,11 +128,11 @@ namespace SIT.Coop.Core.Player
             //if (LastRotationPacket == null)
             //    return;
 
-            //if (LastMovementPacket.ContainsKey("t") && long.Parse(LastMovementPacket["t"].ToString()) < DateTime.Now.AddSeconds(-PacketTimeoutInSeconds).Ticks)
-            //{
-            //    LastMovementPacket = null;
-            //    return;
-            //}
+            if (LastMovementPacket.ContainsKey("t") && long.Parse(LastMovementPacket["t"].ToString()) < DateTime.Now.AddSeconds(-10).Ticks)
+            {
+                LastMovementPacket = null;
+                return;
+            }
 
             PlayerOnMovePatch.MoveReplicated(player, LastMovementPacket);
 

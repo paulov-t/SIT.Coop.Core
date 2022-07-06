@@ -45,9 +45,11 @@ namespace SIT.Coop.Core.Matchmaker
 
         [PatchPrefix]
         private static bool PatchPrefix(
-            ref object session, ref ESideType side, ref object selectedDateTime, ref object location, ref bool local, ref string keyId,
-
-			ref EFT.UI.Matchmaker.MatchMakerAcceptScreen __instance,
+            //ref object session, ref ESideType side, ref object selectedDateTime, ref object location, ref bool local, ref string keyId,
+            ref object session, ref RaidSettings raidSettings,
+            ref EFT.ERaidMode ___eraidMode_0,
+            ref EFT.RaidSettings ___raidSettings_0,
+            ref EFT.UI.Matchmaker.MatchMakerAcceptScreen __instance,
             //ref ScreenController ___ScreenController, 
             ref DefaultUIButton ____updateListButton,
             ref Profile ___profile_0
@@ -56,19 +58,13 @@ namespace SIT.Coop.Core.Matchmaker
 			Logger.LogInfo("MatchmakerAcceptScreenShow.PatchPrefix");
 			//_updateListButton = ____updateListButton;
 			MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance = __instance;
-			//MatchmakerAcceptPatches.ScreenController = ___ScreenController;
-            local = false;
 
-            var typeOfInstance = __instance.GetType();
-            var fields = typeOfInstance.GetFields(BindingFlags.Instance | BindingFlags.NonPublic);
-            foreach (FieldInfo property in fields)
-            {
-                if (property.Name.Contains("bool"))
-                {
-                    Logger.LogInfo($"MatchmakerAcceptScreenShow.PatchPrefix:Set {property.Name} to false");
-                    property.SetValue(MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance, false);
-                }
-            }
+            raidSettings.RaidMode = ERaidMode.Online;
+            //eraidMode_0 = ERaidMode.Online;
+            //MatchmakerAcceptPatches.ScreenController = ___ScreenController;
+            //local = false;
+            //___raidSettings_0.RaidMode = ERaidMode.Online;
+            //___raidSettings_0.RaidMode = ERaidMode.Coop;
 
             //return false; // dont do anything, think for ourselves?
             return true; // run the original
@@ -77,7 +73,8 @@ namespace SIT.Coop.Core.Matchmaker
 
         [PatchPostfix]
         private static void PatchPostfix(
-			ref EFT.UI.Matchmaker.MatchMakerAcceptScreen __instance,
+            ref object session, ref RaidSettings raidSettings,
+            ref EFT.UI.Matchmaker.MatchMakerAcceptScreen __instance,
 			ref Profile ___profile_0,
             ref DefaultUIButton ____acceptButton,
             ref DefaultUIButton ____playersRaidReadyPanel,
@@ -89,6 +86,8 @@ namespace SIT.Coop.Core.Matchmaker
             Logger.LogInfo(___profile_0.AccountId);
 
             MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance = __instance;
+
+            raidSettings.RaidMode = ERaidMode.Local;
 
             ____acceptButton.gameObject.SetActive(true);
             ____playersRaidReadyPanel.ShowGameObject();

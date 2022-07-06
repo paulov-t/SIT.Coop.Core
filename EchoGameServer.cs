@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using SIT.Coop.Core;
+using SIT.Tarkov.Core;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -56,7 +57,8 @@ namespace CoopTarkovGameServer
         public TcpListener tcpServer { get; set; }
         public List<UdpClient> udpReceivers;
         public int CurrentReceiverIndex = 0;
-        public int NumberOfReceivers = 2; // Two Channels. Reliable and Unreliable
+        //public int NumberOfReceivers = 2; // Two Channels. Reliable and Unreliable
+        public int NumberOfReceivers = 1;
         public int udpReceiverPort { get { return Plugin.UDPPort; } }
         public DateTime StartupTime = DateTime.Now;
         public bool quit;
@@ -103,6 +105,14 @@ namespace CoopTarkovGameServer
 
         public void CreateListenersAndStart()
         {
+            var internalIPString = new Request().PostJson("/ServerInternalIPAddress", null);
+            var externalIPString = new Request().PostJson("/ServerExternalIPAddress", null);
+            if (string.IsNullOrEmpty(internalIPString))
+                internalIPString = "127.0.0.1";
+
+            AddToLog($"{this.GetType()}:CreateListenersAndStart:{internalIPString}");
+
+
             //tcpReceiver = new TcpClient();
             udpReceivers = new List<UdpClient>();
             for (var i = 0; i < NumberOfReceivers; i++)
@@ -116,7 +126,8 @@ namespace CoopTarkovGameServer
 
                 //var udpReceiver = new UdpClient(newPort);
                 
-                var newIpEndPoint = new IPEndPoint(IPAddress.Any, newPort);
+                //var newIpEndPoint = new IPEndPoint(IPAddress.Any, newPort);
+                var newIpEndPoint = new IPEndPoint(IPAddress.Parse(internalIPString), newPort);
                 var udpReceiver = new UdpClient(newIpEndPoint);
                 AddToLog(this.GetType() + ": Started udp receiver " + newIpEndPoint.ToString());
                 //udpReceiver.AllowNatTraversal(true);
@@ -124,12 +135,12 @@ namespace CoopTarkovGameServer
                 //udpReceiver.DontFragment = false;
                 udpReceiver.Client.SendTimeout = 500; // defaulted min
                 udpReceiver.Client.ReceiveTimeout = 500; // defaulted min
-                //const int SIO_UDP_CONNRESET = -1744830452;
-                //udpReceiver.Client.IOControl(
-                //    (IOControlCode)SIO_UDP_CONNRESET,
-                //    new byte[] { 0, 0, 0, 0 },
-                //    null
-                //);
+                const int SIO_UDP_CONNRESET = -1744830452;
+                udpReceiver.Client.IOControl(
+                    (IOControlCode)SIO_UDP_CONNRESET,
+                    new byte[] { 0, 0, 0, 0 },
+                    null
+                );
                 //udpReceiver.Client.ReceiveBufferSize = 50;
                 //udpReceiver.Client.SendBufferSize = 300;
                 udpReceiver.Client.ReceiveBufferSize = 16384;
@@ -528,33 +539,38 @@ namespace CoopTarkovGameServer
         {
             if (receivedIpEndPoint == null)
             {
-                AddToLog("IP End Point is NULL! WTF!");
+                AddToLog(this.GetType() + ": DataReceivedServer::[ERROR] IP End Point is NULL! WTF!");
                 return;
             }
 
             if (udpReceivers.Count == 0)
             {
-                AddToLog("AddNewConnection attempting to add new connection when there are no receivers!");
+                AddToLog(this.GetType() + ": DataReceivedServer::[ERROR] AddNewConnection attempting to add new connection when there are no receivers!");
                 return;
             }
 
             if (!ConnectedClients.Keys.Any((IPEndPoint x) => x.ToString() == receivedIpEndPoint.ToString()))
             {
-                ConnectedClientToReceiverPort.TryAdd(receivedIpEndPoint, (udpReceivers[0], udpReceiverPort + 0));
-                NumberOfConnections++;
-                // continuously attempt to add
-                ConnectedClients.TryAdd(receivedIpEndPoint, playerId);
-
-                if (isHost)
-                    HostConnection = (receivedIpEndPoint, playerId);
-
-                //Debug.WriteLine(this.GetType() + ": DataReceivedServer::New Connection from " + receivedIpEndPoint.ToString());
-                //Console.WriteLine(this.GetType() + ": DataReceivedServer::New Connection from " + receivedIpEndPoint.ToString());
-                if(OnConnectionReceived != null)
+                if (ConnectedClients.TryAdd(receivedIpEndPoint, playerId))
                 {
-                    OnConnectionReceived(receivedIpEndPoint);
+                    ConnectedClientToReceiverPort.TryAdd(receivedIpEndPoint, (udpReceivers[0], udpReceiverPort + 0));
+                    NumberOfConnections++;
+
+                    if (isHost)
+                        HostConnection = (receivedIpEndPoint, playerId);
+
+                    //Debug.WriteLine(this.GetType() + ": DataReceivedServer::New Connection from " + receivedIpEndPoint.ToString());
+                    //Console.WriteLine(this.GetType() + ": DataReceivedServer::New Connection from " + receivedIpEndPoint.ToString());
+                    if (OnConnectionReceived != null)
+                    {
+                        OnConnectionReceived(receivedIpEndPoint);
+                    }
+                    AddToLog(this.GetType() + ": DataReceivedServer::Connection [NEW] from " + receivedIpEndPoint.ToString());
                 }
-                AddToLog(this.GetType() + ": DataReceivedServer::New Connection from " + receivedIpEndPoint.ToString());
+                else
+                {
+                    AddToLog(this.GetType() + ": DataReceivedServer::Connection [RESTORE] from " + receivedIpEndPoint.ToString());
+                }
             }
         }
 

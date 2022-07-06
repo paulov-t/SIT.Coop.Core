@@ -17,13 +17,13 @@ namespace SIT.Coop.Core.Matchmaker.MatchmakerAccept.Grouping
         }
 
         [PatchPrefix]
-        public static void PatchPrefix(ref string playerId, ref string locationId)
+        public static void PatchPrefix(ref string playerId)
         {
             //Logger.LogInfo("SendInvitePatch.PatchPrefix");
         }
 
         [PatchPostfix]
-        public static void PatchPostfix(ref string playerId, ref string locationId)
+        public static void PatchPostfix(ref string playerId)
         {
             Logger.LogInfo("SendInvitePatch.PatchPostfix");
             MatchmakerAcceptPatches.MatchingType = EMatchmakerType.GroupLeader;
