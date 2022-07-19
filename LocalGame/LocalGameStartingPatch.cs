@@ -14,6 +14,8 @@ using CoopTarkovGameServer;
 using System.Collections.Concurrent;
 using BepInEx.Configuration;
 using SIT.Coop.Core.Player;
+using Comfort.Common;
+using EFT;
 
 namespace SIT.Coop.Core.LocalGame
 {
@@ -22,7 +24,7 @@ namespace SIT.Coop.Core.LocalGame
     /// </summary>
     public class LocalGameStartingPatch : ModulePatch
     {
-        public static EchoGameServer gameServer;
+        //public static EchoGameServer gameServer;
         private static ConfigFile _config;
 
         private static LocalGameSpawnAICoroutinePatch gameSpawnAICoroutinePatch;
@@ -95,14 +97,16 @@ namespace SIT.Coop.Core.LocalGame
         {
             //Logger.LogInfo($"LocalGameStartingPatch:PatchPostfix");
             LocalGamePatches.LocalGameInstance = __instance;
+            var gameWorld = Singleton<GameWorld>.Instance;
+            gameWorld.GetOrAddComponent<CoopGameComponent>();
 
-            Logger.LogInfo($"LocalGameStartingPatch:PatchPostfix:Connecting to Echo Server");
+            //Logger.LogInfo($"LocalGameStartingPatch:PatchPostfix:Connecting to Echo Server");
             await StartAndConnectToServer(__instance);
         }
 
         public static async Task StartAndConnectToServer(object __instance)
         {
-            Logger.LogInfo("LocalGameStartingPatch.StartAndConnectToServer : Matchmaker Matching type is " + Matchmaker.MatchmakerAcceptPatches.MatchingType);
+            //Logger.LogInfo("LocalGameStartingPatch.StartAndConnectToServer : Matchmaker Matching type is " + Matchmaker.MatchmakerAcceptPatches.MatchingType);
             if (!(__instance.GetType().Name.Contains("HideoutGame")) && MatchmakerAcceptPatches.MatchingType != EMatchmakerType.Single)
             {
                 if (MatchmakerAcceptPatches.MatchingType == EMatchmakerType.GroupLeader)
@@ -119,50 +123,48 @@ namespace SIT.Coop.Core.LocalGame
                     //    Logger.LogInfo("Destroyed Echo Server");
                     //}
 
-                    if (gameServer == null)
-                    {
-                        Logger.LogInfo("Starting Echo Server");
-                        gameServer = new EchoGameServer();
-                        gameServer.OnLog += EchoGameServer_OnLog;
-                        gameServer.CreateListenersAndStart();
-                        Logger.LogInfo("Echo Server started");
-                    }
+                    //if (gameServer == null)
+                    //{
+                    //    Logger.LogInfo("Starting Echo Server");
+                    //    gameServer = new EchoGameServer();
+                    //    gameServer.OnLog += EchoGameServer_OnLog;
+                    //    gameServer.CreateListenersAndStart();
+                    //    Logger.LogInfo("Echo Server started");
+                    //}
 
-                    Logger.LogInfo("LocalGameStartingPatch.StartAndConnectToServer : Telling Central to Create Server");
+                    //Logger.LogInfo("LocalGameStartingPatch.StartAndConnectToServer : Telling Central to Create Server");
 
                     //string myExternalAddress = ServerCommunication.GetMyExternalAddress();
 
                     // ------ As Host, Notify Central Server --------
                     await new Request().PostJsonAsync("/client/match/group/server/start", JsonConvert.SerializeObject(""));
-                    await ServerCommunication.SendDataDownWebSocket("Start=" + PatchConstants.GetPHPSESSID());
+                    //await ServerCommunication.SendDataDownWebSocket("Start=" + PatchConstants.GetPHPSESSID());
                     await Task.Delay(500);
                 }
                 else
                 {
-                    Logger.LogInfo("LocalGameStartingPatch.StartAndConnectToServer : Joining Server");
+                    //Logger.LogInfo("LocalGameStartingPatch.StartAndConnectToServer : Joining Server");
 
                     await new Request().PostJsonAsync("/client/match/group/server/join", JsonConvert.SerializeObject(MatchmakerAcceptPatches.GetGroupId()));
                     await Task.Delay(500);
                 }
-                //SetMatchmakerStatus("Attempting to connect to Game Host. . . (BepInEx)");
-                //await Task.Delay(3000);
-
-                //LocalGame.SetMatchmakerStatus("Attempting to connect to Game Host. . .");
-                //if (this.ConnectToBackendWebSocket(backendUrl))
-                //{
-                //    LocalGame.SetMatchmakerStatus("Connected to Game Host");
-                //    await Task.Delay(1000);
-                //}
-                //else
-                //{
-                //    LocalGame.SetMatchmakerStatus("Unable to Connect to MP servers. Reverting to Singleplayer.");
-                //    await Task.Delay(3000);
-                //    BaseLocalGame<TPlayerOwner>.ForceSinglePlayer = true;
-                //}
-
-                //MatchMakerAcceptScreen.ServerCommunicationCoopImplementation.OnPostLocalPlayerData += ServerCommunicationCoopImplementation_OnPostLocalPlayerData;
             }
-            ServerCommunication.OnDataReceived += ServerCommunication_OnDataReceived;
+            ServerCommunication.OnDataReceived += ServerCommunication_PingPong;
+            ServerCommunication.OnDataArrayReceived += ServerCommunication_OnDataArrayReceived;
+        }
+
+        private static void ServerCommunication_OnDataArrayReceived(string[] array)
+        {
+            for(var i = 0; i < array.Length; i++)
+            {
+                var @string = array[i];
+                if (@string.Length == 4 && @string == "Ping")
+                {
+                    //this.DataEnqueued.Enqueue(Encoding.ASCII.GetBytes("Pong"));
+                    ServerCommunication.SendDataDownWebSocket("Pong");
+                    return;
+                }
+            }
         }
 
         private static void EchoGameServer_OnLog(string text)
@@ -170,7 +172,7 @@ namespace SIT.Coop.Core.LocalGame
             Logger.LogInfo(text);
         }
 
-        private static void ServerCommunication_OnDataReceived(byte[] buffer)
+        private static void ServerCommunication_PingPong(byte[] buffer)
         {
             if (buffer.Length == 0)
                 return;
@@ -199,13 +201,24 @@ namespace SIT.Coop.Core.LocalGame
                                 if (@string.Length > 0 && @string[0] == '{' && @string[@string.Length - 1] == '}')
                                 {
                                     var dictionary = JsonConvert.DeserializeObject<Dictionary<string, object>>(@string);
-                                    if (dictionary != null && dictionary.Count > 0 && dictionary.ContainsKey("accountId"))
+
+                                    if (dictionary != null && dictionary.Count > 0)
                                     {
-                                        var player = CoopGameComponent.GetPlayerByAccountId(dictionary["accountId"].ToString());
-                                        if (player != null)
+                                        //if (dictionary.ContainsKey("SERVER"))
+                                        //{
+                                        //    Logger.LogInfo($"LocalGameStartingPatch:OnDataReceived:SERVER:{buffer.Length}");
+                                        //    CoopGameComponent.QueuedPackets.Enqueue(dictionary);
+                                        //}
+                                        //else
+                                        if (!dictionary.ContainsKey("SERVER") && dictionary.ContainsKey("accountId"))
                                         {
-                                            player.GetOrAddComponent<PlayerReplicatedComponent>().QueuedPackets.Enqueue(dictionary);
+                                            var player = CoopGameComponent.GetPlayerByAccountId(dictionary["accountId"].ToString());
+                                            if (player != null)
+                                            {
+                                                player.GetOrAddComponent<PlayerReplicatedComponent>().QueuedPackets.Enqueue(dictionary);
+                                            }
                                         }
+                                        
 
                                         //if (dictionary.ContainsKey("m") && !dictionary.ContainsKey("method"))
                                         //    dictionary.Add("method", dictionary["m"]);

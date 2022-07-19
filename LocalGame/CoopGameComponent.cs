@@ -1,8 +1,12 @@
-﻿using EFT;
+﻿using Comfort.Common;
+using Diz.Jobs;
+using EFT;
+using EFT.InventoryLogic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SIT.Coop.Core.Matchmaker;
 using SIT.Coop.Core.Player;
+using SIT.Coop.Core.Web;
 using SIT.Tarkov.Core;
 using SIT.Tarkov.Core.AI;
 using System;
@@ -10,39 +14,126 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 
 namespace SIT.Coop.Core.LocalGame
 {
+	struct Continuation
+	{
+		Profile Profile;
+		TaskScheduler TaskScheduler { get; }
 
+
+		public Continuation(TaskScheduler taskScheduler)
+		{
+			Profile = null;
+			TaskScheduler = taskScheduler;
+		}
+		public Task<Profile> LoadBundle(Profile p)
+        {
+			var loadTask = SIT.A.Tarkov.Core.Plugin.LoadBundlesAndCreatePools(Profile.GetAllPrefabPaths(false).ToArray());
+
+			return loadTask.ContinueWith((t) => { return p; }, TaskScheduler);
+		}
+
+		public Task<Profile> LoadBundles(Task<Profile> task)
+		{
+			Profile = task.Result;
+
+			var loadTask = SIT.A.Tarkov.Core.Plugin.LoadBundlesAndCreatePools(Profile.GetAllPrefabPaths(false).ToArray());
+
+			return loadTask.ContinueWith(GetProfile, TaskScheduler);
+		}
+
+		private Profile GetProfile(Task task)
+		{
+			//Logger.LogInfo("LoadBotTemplatesPatch+Continuation.GetProfile");
+			return Profile;
+		}
+	}
 	public class CoopGameComponent : MonoBehaviour
 	{
-		public static Type PoolManagerType;
-
 		List<string> MethodsToReplicateToMyPlayer = new List<string>()
 			{
 				"Dead",
 				"Damage",
 			};
 
+		BepInEx.Logging.ManualLogSource Logger;
+
 		void Awake()
 		{
-			PatchConstants.Logger.LogInfo("CoopGameComponent:Awake");
 			Players.Clear();
 
-			if (PoolManagerType == null)
-			{
-				PoolManagerType = PatchConstants.EftTypes.Single(x => PatchConstants.GetAllMethodsForType(x).Any(x => x.Name == "LoadBundlesAndCreatePools"));
-			}
+			Logger = BepInEx.Logging.Logger.CreateLogSource("CoopGameComponent");
+			//Logger.LogInfo("CoopGameComponent:Awake");
 		}
 
 		void Start()
 		{
-			PatchConstants.Logger.LogInfo("CoopGameComponent:Start");
+			//Logger.LogInfo("CoopGameComponent:Start");
 			//((MonoBehaviour)this).InvokeRepeating("RunQueuedActions", 0, 0.33f);
 			//((MonoBehaviour)this).InvokeRepeating("RunParityCheck", 0, 1f);
+            ServerCommunication.OnDataReceived += ServerCommunication_OnDataReceived;
+            ServerCommunication.OnDataStringReceived += ServerCommunication_OnDataStringReceived;
+            ServerCommunication.OnDataArrayReceived += ServerCommunication_OnDataArrayReceived;
 		}
+
+        private void ServerCommunication_OnDataArrayReceived(string[] array)
+        {
+
+        }
+
+        private void ServerCommunication_OnDataStringReceived(string @string)
+        {
+
+        }
+
+        private void ServerCommunication_OnDataReceived(byte[] buffer)
+        {
+			if (buffer.Length == 0)
+				return;
+
+			try
+			{
+				//string @string = streamReader.ReadToEnd();
+				string @string = UTF8Encoding.UTF8.GetString(buffer);
+
+				if (@string.Length == 4)
+				{
+					return;
+				}
+				else
+				{
+					Task.Run(() =>
+					{
+                        //Logger.LogInfo($"CoopGameComponent:OnDataReceived:{buffer.Length}");
+                        //Logger.LogInfo($"CoopGameComponent:OnDataReceived:{@string}");
+
+						if (@string.Length > 0 && @string[0] == '{' && @string[@string.Length - 1] == '}')
+						{
+							var dictionary = JsonConvert.DeserializeObject<Dictionary<string, object>>(@string);
+
+							if (dictionary != null && dictionary.Count > 0)
+							{
+								if (dictionary.ContainsKey("SERVER"))
+								{
+									//Logger.LogInfo($"LocalGameStartingPatch:OnDataReceived:SERVER:{buffer.Length}");
+									QueuedPackets.Enqueue(dictionary);
+								}
+							}
+						}
+					});
+				}
+			}
+			catch (Exception ex2)
+			{
+				return;
+			}
+		}
+
 
 		public static EFT.LocalPlayer GetPlayerByAccountId(string accountId)
 		{
@@ -73,6 +164,8 @@ namespace SIT.Coop.Core.LocalGame
             {
             }
 
+			PatchConstants.Logger.LogInfo($"Failed to find Profile of {accountId} in Players list");
+
 			return null;
 
 		}
@@ -88,19 +181,24 @@ namespace SIT.Coop.Core.LocalGame
 
 		private void DataReceivedClient_PlayerBotSpawn(Dictionary<string, object> parsedDict, string accountId, string profileId, Vector3 newPosition, bool isBot)
 		{
+			Logger.LogInfo("DataReceivedClient_PlayerBotSpawn");
+
 			if (LocalGamePatches.MyPlayerProfile == null)
+			{
+				Logger.LogInfo("LocalGamePatches.MyPlayerProfile is NULL");
 				return;
+			}
 
 			if (
-				!Players.ContainsKey(accountId) && LocalGamePatches.MyPlayerProfile.AccountId != accountId
-				&&
+			//	!Players.ContainsKey(accountId) && LocalGamePatches.MyPlayerProfile.AccountId != accountId
+			//	&&
 				!PlayersToSpawn.ContainsKey(accountId)
 				)
 			{
 				try
 				{
 
-					PatchConstants.Logger.LogInfo("DataReceivedClient_PlayerBotSpawn:: Adding " + accountId + " to spawner list");
+					Logger.LogInfo("DataReceivedClient_PlayerBotSpawn:: Adding " + accountId + " to spawner list");
 					this.AccountsLoading.TryAdd(accountId, null);
 					Profile profile = LocalGamePatches.MyPlayerProfile.Clone();
 					profile.AccountId = accountId;
@@ -134,9 +232,12 @@ namespace SIT.Coop.Core.LocalGame
 					}
 					if (parsedDict.ContainsKey("p.equip"))
 					{
-						//var equipment = parsedDict["p.equip"].ToString().ParseJsonTo<GClass2058>(Array.Empty<JsonConverter>());
-						//profile.Inventory.Equipment = equipment;
-					}
+                    var pEquip = parsedDict["p.equip"].ToString();
+                    //var equipmentJT = JsonConvert.DeserializeObject<JToken>(pEquip);
+                    var equipment = parsedDict["p.equip"].ToString().ParseJsonTo<GClass2136>(Array.Empty<JsonConverter>());
+                    //profile.Inventory.Equipment
+                    profile.Inventory.Equipment = equipment;
+                }
 					if (parsedDict.ContainsKey("isHost"))
 					{
 					}
@@ -154,12 +255,12 @@ namespace SIT.Coop.Core.LocalGame
 					QuickLog($"DataReceivedClient_PlayerBotSpawn::ERROR::" + ex.Message);
 					//QuickLog(ex.ToString());
 				}
-			}
-			else
-			{
-				//QuickLog($"DataReceivedClient_PlayerBotSpawn::Attempting to Re-Process {accountId}, ignoring");
-			}
-		}
+            }
+            //else
+            //{
+            //             //QuickLog($"DataReceivedClient_PlayerBotSpawn::Attempting to Re-Process {accountId}, ignoring");
+            //         }
+        }
 
 
 
@@ -176,7 +277,37 @@ namespace SIT.Coop.Core.LocalGame
 				//	return null;
 				//}
 				//int playerId = int.Parse(InvokeLocalGameInstanceMethod("method_13").ToString());
+				if(Players == null)
+				{
+					QuickLog("Players is NULL wtf!");
+					return null;
+				}
+
 				int playerId = Players.Count + 1;
+				if(profile == null)
+                {
+					QuickLog("CreatePhysicalOtherPlayerOrBot profile is NULL wtf!");
+					return null;
+                }
+
+				if(PatchConstants.TypeDictionary["StatisticsSession"] == null)
+                {
+					QuickLog("StatisticsSession is NULL wtf!");
+					return null;
+				}
+
+				if (PatchConstants.CharacterControllerSettings.ClientPlayerMode == null)
+				{
+					QuickLog("PatchConstants.CharacterControllerSettings.ClientPlayerMode is NULL wtf!");
+					return null;
+				}
+
+				//if(PatchConstants.GetFieldFromType(PatchConstants.TypeDictionary["FilterCustomization"], "Default").GetValue(null) == null)
+    //            {
+				//	QuickLog("FilterCustomization is NULL wtf!");
+				//	return null;
+				//}
+
 				profile.SetSpawnedInSession(true);
 
 				/* TODO. Do this shit next private static async Task<object> CallGetByReflection(IFoo foo, IBar bar)
@@ -192,11 +323,7 @@ namespace SIT.Coop.Core.LocalGame
         }
 				 */
 
-				var createMethod = typeof(LocalPlayer).GetMethod("Create", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-				var localPlayer = (Task<LocalPlayer>)createMethod.Invoke(
-					null,
-					//onstants.InvokeAsyncMethod(typeof(LocalPlayer), typeof(LocalPlayer), "Create",
-					new object[] {
+				var localPlayer = await EFT.LocalPlayer.Create(
 						playerId
 						, position
 						, Quaternion.identity
@@ -204,23 +331,50 @@ namespace SIT.Coop.Core.LocalGame
 						, ""
 						, EPointOfView.ThirdPerson
 						, profile
-						, false
-						, EUpdateQueue.Update //PatchConstants.GetAllPropertiesForObject(LocalGameInstance).FirstOrDefault(x=>x.Name == "UpdateQueue").GetValue(LocalGameInstance)
+						//, false
+						, true
+						, EUpdateQueue.Update
 						, armsUpdateMode
 						, bodyUpdateMode
-						//, GClass523.Config.CharacterController.ClientPlayerMode // TODO: Make this dynamic/reflected
 						, PatchConstants.CharacterControllerSettings.ClientPlayerMode
 						, () => 1f
 						, () => 1f
-						, 0
-						//, new GClass1478()
-						, Activator.CreateInstance(PatchConstants.TypeDictionary["StatisticsSession"])
-						, PatchConstants.GetFieldFromType(PatchConstants.TypeDictionary["FilterCustomization"], "Default").GetValue(null)
+						, (GInterface117)Activator.CreateInstance(PatchConstants.TypeDictionary["StatisticsSession"])
+						//, (GInterface74)PatchConstants.GetFieldFromType(PatchConstants.TypeDictionary["FilterCustomization"], "Default").GetValue(null)
+						,GClass1268.Default
 						, null
 						, false
-					}
-
 					);
+
+				//var createMethod = typeof(LocalPlayer).GetMethod("Create", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+				//var localPlayer = (Task<LocalPlayer>)createMethod.Invoke(
+				//	null,
+				//	//onstants.InvokeAsyncMethod(typeof(LocalPlayer), typeof(LocalPlayer), "Create",
+				//	new object[] {
+				//		playerId
+				//		, position
+				//		, Quaternion.identity
+				//		, "Player"
+				//		, ""
+				//		, EPointOfView.ThirdPerson
+				//		, profile
+				//		, false
+				//		, EUpdateQueue.Update //PatchConstants.GetAllPropertiesForObject(LocalGameInstance).FirstOrDefault(x=>x.Name == "UpdateQueue").GetValue(LocalGameInstance)
+				//		, armsUpdateMode
+				//		, bodyUpdateMode
+				//		//, GClass523.Config.CharacterController.ClientPlayerMode // TODO: Make this dynamic/reflected
+				//		, PatchConstants.CharacterControllerSettings.ClientPlayerMode
+				//		, () => 1f
+				//		, () => 1f
+				//		, 0
+				//		//, new GClass1478()
+				//		, Activator.CreateInstance(PatchConstants.TypeDictionary["StatisticsSession"])
+				//		, PatchConstants.GetFieldFromType(PatchConstants.TypeDictionary["FilterCustomization"], "Default").GetValue(null)
+				//		, null
+				//		, false
+				//	}
+
+				//	);
 
 				//typeof(LocalPlayer).GetMethod("Create").inv
 
@@ -247,7 +401,7 @@ namespace SIT.Coop.Core.LocalGame
 				//	, null
 				//	, false);
 				//return localPlayer;
-				return await localPlayer;
+				return localPlayer;
 			}
 			catch (Exception ex)
 			{
@@ -262,7 +416,7 @@ namespace SIT.Coop.Core.LocalGame
 		public static ConcurrentDictionary<string, EFT.LocalPlayer> OldPlayers { get; } = new ConcurrentDictionary<string, EFT.LocalPlayer>();
 		public static ConcurrentDictionary<string, EFT.LocalPlayer> Players { get; } = new ConcurrentDictionary<string, EFT.LocalPlayer>();
 
-		public static ConcurrentDictionary<string, ConcurrentQueue<Dictionary<string, object>>> ClientQueuedActions { get; } = new ConcurrentDictionary<string, ConcurrentQueue<Dictionary<string, object>>>();
+		public static ConcurrentQueue<Dictionary<string, object>> QueuedPackets { get; } = new ConcurrentQueue<Dictionary<string, object>>();
 
 		public static ConcurrentDictionary<EFT.LocalPlayer, Dictionary<string, object>> ServerReliablePackets { get; } 
 			= new ConcurrentDictionary<EFT.LocalPlayer, Dictionary<string, object>>();
@@ -270,106 +424,58 @@ namespace SIT.Coop.Core.LocalGame
 
 		void RunQueuedActions()
 		{
-			//Task.Run(() =>
-			{
-				if (ClientQueuedActions == null)
-					return;
-
-				if (ClientQueuedActions.Any())
-				{
-					try
-					{
-						//foreach (KeyValuePair<string, Queue<Dictionary<string, object>>> clientQueuedAction in this.ClientQueuedMoveActions)
-						//UpdateClientQueuedActions_Move();
-
-						foreach (KeyValuePair<string, ConcurrentQueue<Dictionary<string, object>>> clientQueuedAction in ClientQueuedActions)
-						{
-							string key = clientQueuedAction.Key;
-							ConcurrentQueue<Dictionary<string, object>> value = clientQueuedAction.Value;
-							if (value == null)
-								continue;
-
-                            while (value.Any())
-                            //if (value.Any())
+			if (QueuedPackets.Any())
+            {
+				if(QueuedPackets.TryDequeue(out var queuedPacket))
+                {
+					if(queuedPacket != null)
+                    {
+						if(queuedPacket.ContainsKey("m"))
+                        {
+							var method = queuedPacket["m"];
+                            PatchConstants.Logger.LogInfo("CoopGameComponent.RunQueuedActions:method:" + method);
+                            switch (method)
                             {
-								bool dequeued = value.TryDequeue(out Dictionary<string, object> dictionary);
-								if (!dequeued)
-									continue;
+								case "PlayerSpawn":
+									string accountId = queuedPacket["accountId"].ToString();
+									if (Players != null && Players.Count > 0 && !OldPlayers.ContainsKey(accountId))
+									{
 
-								if (dictionary == null)
-									continue;
+										Vector3 newPosition = Players.First().Value.Position;
+										if (queuedPacket.ContainsKey("sPx") 
+											&& queuedPacket.ContainsKey("sPy") 
+											&& queuedPacket.ContainsKey("sPz"))
+										{
+											string npxString = queuedPacket["sPx"].ToString();
+											newPosition.x = float.Parse(npxString);
+											string npyString = queuedPacket["sPy"].ToString();
+											newPosition.y = float.Parse(npyString);
+											string npzString = queuedPacket["sPz"].ToString();
+											newPosition.z = float.Parse(npzString);
 
-								if (!dictionary.ContainsKey("accountId") || !dictionary.ContainsKey("m"))
-									continue;
-
-								if (LocalGamePatches.MyPlayerProfile == null)
-									continue;
-
-								string accountid = dictionary["accountId"].ToString();
-								var player = GetPlayerByAccountId(accountid);
-								if (player == null)
-									continue;
-
-								player.GetOrAddComponent<PlayerReplicatedComponent>().QueuedPackets.Enqueue(dictionary);
-
-								EBodyPart eBodyPart = EBodyPart.Common;
-								if (dictionary.ContainsKey("bodyPart"))
-									eBodyPart = (EBodyPart)Enum.Parse(typeof(EBodyPart), dictionary["bodyPart"].ToString());
-
-								var method = dictionary["m"].ToString();
-								//if (
-								//	(accountid == LocalGamePatches.MyPlayerProfile.AccountId || (Matchmaker.MatchmakerAcceptPatches.IsServer && player.IsAI))
-								//	&& !MethodsToReplicateToMyPlayer.Contains(method))
-								//	continue;
-
-
-								//switch (method)
-								//{
-								//	case "Damage":
-								//		//PatchConstants.Logger.LogInfo("Damage");
-								//		PlayerOnDamagePatch.DamageReplicated(player, dictionary);
-								//		break;
-								//	case "Dead":
-								//		PatchConstants.Logger.LogInfo("Dead");
-								//		break;
-								//	case "Door":
-								//		PatchConstants.Logger.LogInfo("Door");
-								//		break;
-								//	//case "Move":
-        // //                               PlayerOnMovePatch.MoveReplicated(player, dictionary);
-        // //                               break;
-								//	case "Rotate":
-        //                                //PatchConstants.Logger.LogInfo("Rotate");
-        //                                PlayerOnRotatePatch.RotateReplicated(player, dictionary);
-        //                                break;
-								//	case "Say":
-								//		break;
-								//	case "SetTriggerPressed":
-								//		break;
-								//	case "SetItemsInHands":
-								//		break;
-								//	case "InventoryOpened":
-								//		PlayerOnInventoryOpenedPatch.InventoryOpenedReplicated(player, dictionary);
-								//		break;
-
-								//}
+											//QuickLog("New Position found for Spawning Player");
+										}
+										this.DataReceivedClient_PlayerBotSpawn(queuedPacket, accountId, queuedPacket["profileId"].ToString(), newPosition, false);
+									}
+									else
+                                    {
+										Logger.LogInfo("Unable to Spawn player, players list is empty, or player already exists");
+                                    }
+									break;
 							}
 						}
-					}
-					catch (Exception ex)
-					{
-						PatchConstants.Logger.LogInfo($"{ex}");
-
-					}
-				}
-				//});
-			}
+                    }
+                }
+            }
 		}
 
 		DateTime? LastParityCheck = DateTime.Now;
 
 		async void UpdateParityCheck()
 		{
+			if (MatchmakerAcceptPatches.IsSinglePlayer)
+				return;
+
 			await Task.Run(() => {
 				try
 				{
@@ -555,12 +661,14 @@ namespace SIT.Coop.Core.LocalGame
 			}
 		}
 
-		private void UpdateClientSpawnPlayers()
+		private async void UpdateClientSpawnPlayers()
 		{
 			try
 			{
 				if (!PlayersToSpawn.Any())
 					return;
+
+				var taskScheduler = TaskScheduler.FromCurrentSynchronizationContext();
 
 				var accountId = PlayersToSpawn.Keys.First();
 				var newPlayerToSpawn = PlayersToSpawn[accountId];
@@ -572,28 +680,42 @@ namespace SIT.Coop.Core.LocalGame
 						this.QuickLog("Update::Loading a new Player " + newPlayerToSpawn.Item1.AccountId);
 						IEnumerable<ResourceKey> allPrefabPaths = newPlayerToSpawn.Item1.GetAllPrefabPaths();
 						if (allPrefabPaths.Count() > 0)
-						{
-							var loadTask = SIT.A.Tarkov.Core.Plugin.LoadBundlesAndCreatePools(allPrefabPaths.ToArray());
-							if (loadTask != null)
+                        {
+							Singleton<JobScheduler>.Instance.SetForceMode(enable: true);
+							await Singleton<GClass1556>.Instance.LoadBundlesAndCreatePools(GClass1556.PoolsCategory.Raid, GClass1556.AssemblyType.Local, allPrefabPaths.ToArray(), GClass2633.General, new GClass2554<GStruct94>(delegate (GStruct94 p)
 							{
-								loadTask.ConfigureAwait(false);
-                                // TODO: Get this working
-                                loadTask.ContinueWith(delegate
-                                {
-                                    //	newPlayerToSpawn.Item3 = ESpawnState.Loaded;
-                                });
-                                //loadTask.GetAwaiter().OnCompleted(() => {
-                                //	newPlayerToSpawn.Item3 = ESpawnState.Loaded;
-                                //});
-                                newPlayerToSpawn.Item3 = ESpawnState.Loaded;
+								//this.QuickLog($"Update::Loading a new Player {newPlayerToSpawn.Item1.AccountId}:{p.Stage}:{p.Progress}");
 
-                            }
+								//base.SetMatchmakerStatus("Loading loot... " + p.Stage, p.Progress);
+							})).ContinueWith((Task t) => {
+								newPlayerToSpawn.Item3 = ESpawnState.Loaded;
+							});
 
-							//Singleton<GClass1481>.Instance.LoadBundlesAndCreatePools(GClass1481.PoolsCategory.Raid, GClass1481.AssemblyType.Local, allPrefabPaths.ToArray(), GClass2536.General)
-							//	.ContinueWith(delegate
+							//	Singleton<GClass1556>.Instance.LoadBundlesAndCreatePools(
+							//		GClass1556.PoolsCategory.Raid
+							//		, GClass1556.AssemblyType.Local
+							//		, allPrefabPaths.ToArray()
+							//		, GClass2633.General
+							//		, (GStruct94 o) => { }
+							//		, CancellationToken.None)
+							//		.ContinueWith(delegate
 							//	{
-							//		this.PlayersToSpawn.Enqueue((newPlayerToSpawn.Item1, newPlayerToSpawn.Item2, true));
+							//		newPlayerToSpawn.Item3 = ESpawnState.Loaded;
 							//	});
+
+							//SIT.A.Tarkov.Core.Plugin.LoadBundlesAndCreatePoolsSync(allPrefabPaths.ToArray());
+							//SIT.A.Tarkov.Core.Plugin.LoadBundlesAndCreatePools(allPrefabPaths.ToArray()).ContinueWith(p =>
+							//{
+							//}, taskScheduler);
+							//newPlayerToSpawn.Item3 = ESpawnState.Loaded;
+
+							//var contin = new Continuation(taskScheduler);
+							//contin.LoadBundle(newPlayerToSpawn.Item1).ContinueWith((r) => {
+
+							//	var rP = r.Result;
+							//                         newPlayerToSpawn.Item3 = ESpawnState.Loaded;
+							//                     });
+
 						}
 						else
 						{
@@ -603,39 +725,36 @@ namespace SIT.Coop.Core.LocalGame
 						break;
 					case ESpawnState.Loaded:
 						newPlayerToSpawn.Item3 = ESpawnState.Spawning;
+						PlayersToSpawn[accountId] = newPlayerToSpawn;
 
 						this.QuickLog("Update::Spawning a new >> Loaded << Player " + newPlayerToSpawn.Item1.AccountId);
 						newPlayerToSpawn.Item1.SetSpawnedInSession(true);
 						Vector3 vector = newPlayerToSpawn.Item2;
 						try
 						{
-							this.CreatePhysicalOtherPlayerOrBot(newPlayerToSpawn.Item1, vector).ContinueWith((x) =>
+							var result = await this.CreatePhysicalOtherPlayerOrBot(newPlayerToSpawn.Item1, vector);
+							if (result != null)
 							{
-								var result = x.Result;
-								if (result != null)
-								{
-									newPlayerToSpawn.Item3 = ESpawnState.Spawned;
+								newPlayerToSpawn.Item3 = ESpawnState.Spawned;
+								this.SetWeaponInHandsOfNewPlayer(result);
 
-									if (Players.TryAdd(newPlayerToSpawn.Item1.AccountId, result))
-									{
-										QuickLog($"Added new Player {newPlayerToSpawn.Item1.AccountId} to Players");
-										var prc = result.GetOrAddComponent<PlayerReplicatedComponent>();
-										prc.player = result;
-										PlayersToAddActivePlayerToAI.Add((result, DateTime.Now));
-										
-										//this.SetWeaponInHandsOfNewPlayer(result);
-									}
-									else
-									{
-										this.QuickLog("Unable to Add new Player to Players Collection");
-									}
-								}
+								if (Players.TryAdd(newPlayerToSpawn.Item1.AccountId, result))
+								{
+									QuickLog($"Added new Player {newPlayerToSpawn.Item1.AccountId} to Players");
+									var prc = result.GetOrAddComponent<PlayerReplicatedComponent>();
+									prc.player = result;
+									PlayersToAddActivePlayerToAI.Add((result, DateTime.Now));
+                                }
 								else
 								{
-									this.QuickLog("Failed to create & spawn the player " + newPlayerToSpawn.Item1.AccountId);
-									newPlayerToSpawn.Item3 = ESpawnState.Loaded;
+									this.QuickLog("Unable to Add new Player to Players Collection");
 								}
-							});
+							}
+							else
+							{
+								this.QuickLog("Failed to create & spawn the player " + newPlayerToSpawn.Item1.AccountId);
+								newPlayerToSpawn.Item3 = ESpawnState.Loaded;
+							}
 						}
 						catch
                         {
@@ -654,6 +773,27 @@ namespace SIT.Coop.Core.LocalGame
 			}
 		}
 
+		private void SetWeaponInHandsOfNewPlayer(LocalPlayer person)
+		{
+			GClass2136 equipment = person.Profile.Inventory.Equipment;
+			if (equipment == null)
+			{
+				return;
+			}
+			Item item = equipment.GetSlot(EquipmentSlot.FirstPrimaryWeapon).ContainedItem ?? equipment.GetSlot(EquipmentSlot.SecondPrimaryWeapon).ContainedItem ?? equipment.GetSlot(EquipmentSlot.Holster).ContainedItem;
+			if (item == null)
+			{
+				return;
+			}
+			person.SetItemInHands(item, delegate (Result<GInterface98> result)
+			{
+				if (result.Failed)
+				{
+					this.QuickLog(result.Error);
+				}
+			});
+		}
+
 
 		void FixedUpdate()
 		{
@@ -667,7 +807,7 @@ namespace SIT.Coop.Core.LocalGame
 			if (!doingclientwork)
 			{
 				doingclientwork = true;
-				UpdateParityCheck();
+				//UpdateParityCheck();
                 UpdateClientSpawnPlayers();
 				UpdateAddPlayersToAICalc();
 				RunQueuedActions();
@@ -702,8 +842,10 @@ namespace SIT.Coop.Core.LocalGame
 			//	logSource = new BepInEx.Logging.ManualLogSource("CoopGameComponent");
 
 			//logSource.LogInfo(log);
-			PatchConstants.Logger.LogInfo(log);
+			Logger.LogInfo(log);
 		}
 
 	}
+
+	
 }

@@ -1,4 +1,5 @@
 ﻿using SIT.Coop.Core.Matchmaker;
+using SIT.Coop.Core.Web;
 using SIT.Tarkov.Core;
 using System;
 using System.Collections.Generic;
@@ -25,10 +26,14 @@ namespace SIT.Coop.Core.Matchmaker.MatchmakerAccept.Grouping
         [PatchPostfix]
         public static void PatchPostfix(ref string playerId)
         {
-            Logger.LogInfo("SendInvitePatch.PatchPostfix");
+            //Logger.LogInfo("SendInvitePatch.PatchPostfix");
             MatchmakerAcceptPatches.MatchingType = EMatchmakerType.GroupLeader;
             MatchmakerAcceptPatches.HostExpectedNumberOfPlayers++;
             MatchmakerAcceptPatches.SetGroupId(PatchConstants.GetPHPSESSID());
+
+            
+            _ = ServerCommunication.SendDataDownWebSocket("Start=" + PatchConstants.GetPHPSESSID());
+
         }
     }
 }

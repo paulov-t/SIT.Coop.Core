@@ -2,6 +2,7 @@
 using Comfort.Common;
 using EFT;
 using SIT.Coop.Core.Player;
+using SIT.Coop.Core.Web;
 using SIT.Tarkov.Core;
 using SIT.Tarkov.Core.AI;
 using System;
@@ -87,7 +88,7 @@ namespace SIT.Coop.Core.LocalGame
             // Run normally.
             if (!Matchmaker.MatchmakerAcceptPatches.IsClient)
             {
-                CoopGameComponent.Players.Clear();
+                //CoopGameComponent.Players.Clear();
                 var nonSpawnWaveShit = PatchConstants.GetFieldOrPropertyFromInstance<object>(
                     LocalGamePatches.LocalGameInstance
                     , BotSystemHelpers.RoleLimitDifficultyType.Name + "_0"
@@ -213,13 +214,13 @@ namespace SIT.Coop.Core.LocalGame
 
             if (CoopGameComponent.Players.Count >= maxCountOfBots) 
             {
-                Logger.LogInfo($"BotCreationMethod. [ERROR] CoopGameComponent.Players is full");
+                //Logger.LogInfo($"BotCreationMethod. [ERROR] CoopGameComponent.Players is full");
                 return null;
             }
 
             if (CoopGameComponent.Players.ContainsKey(profile.AccountId))
             {
-                Logger.LogInfo($"BotCreationMethod. [ERROR] Bot already exists");
+                //Logger.LogInfo($"BotCreationMethod. [ERROR] Bot already exists");
                 return null;
             }
 
@@ -230,7 +231,49 @@ namespace SIT.Coop.Core.LocalGame
             var prc = player.GetOrAddComponent<PlayerReplicatedComponent>();
             prc.player = player;
             CoopGameComponent.Players.TryAdd(profile.AccountId, player);
-            Logger.LogInfo($"BotCreationMethod. [SUCCESS] Adding {profile.AccountId} to CoopGameComponent.Players list");
+            Dictionary<string, object> dictionary2 = new Dictionary<string, object>
+                    {
+                        {
+                            "SERVER",
+                            "SERVER"
+                        },
+                        {
+                            "accountId",
+                            player.Profile.AccountId
+                        },
+                        {
+                            "profileId",
+                            player.ProfileId
+                        },
+                        {
+                            "groupId",
+                            Matchmaker.MatchmakerAcceptPatches.GetGroupId()
+                        },
+                        {
+                            "nP",
+                            position
+                        },
+                        {
+                            "sP",
+                            position
+                        },
+                        { "m", "PlayerSpawn" },
+                        {
+                            "p.info",
+                            player.Profile.Info.SITToJson()
+                        },
+                        {
+                            "p.cust",
+                             player.Profile.Customization.SITToJson()
+                        },
+                        {
+                            "p.equip",
+                            player.Profile.Inventory.Equipment.CloneItem().ToJson()
+                        }
+                    };
+            //new Request().PostJson("/client/match/group/server/players/spawn", dictionary2.ToJson());
+            ServerCommunication.PostLocalPlayerData(player, dictionary2);
+            //Logger.LogInfo($"BotCreationMethod. [SUCCESS] Adding AI {profile.AccountId} to CoopGameComponent.Players list");
             return player;
         }
     }

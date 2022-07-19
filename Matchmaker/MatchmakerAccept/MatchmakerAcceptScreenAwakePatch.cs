@@ -71,7 +71,7 @@ namespace SIT.Coop.Core.Matchmaker
             ref ERaidMode ___eraidMode_0
             )
         {
-			Logger.LogInfo("MatchmakerAcceptScreenAwakePatch.PatchPrefix");
+			//Logger.LogInfo("MatchmakerAcceptScreenAwakePatch.PatchPrefix");
 
 			
 			MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance = __instance;
@@ -120,7 +120,7 @@ namespace SIT.Coop.Core.Matchmaker
             ref ERaidMode ___eraidMode_0
             )
         {
-            Logger.LogInfo("MatchmakerAcceptScreenAwakePatch.PatchPostfix");
+            //Logger.LogInfo("MatchmakerAcceptScreenAwakePatch.PatchPostfix");
         }
 
         public static void GoToRaid()

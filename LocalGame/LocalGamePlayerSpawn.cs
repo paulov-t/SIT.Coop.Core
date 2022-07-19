@@ -79,8 +79,9 @@ namespace SIT.Coop.Core.LocalGame
                 if (Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer)
                     return;
 
-                gameWorld = Singleton<GameWorld>.Instance;
-                coopGameComponent = gameWorld.GetOrAddComponent<CoopGameComponent>();
+                //gameWorld = Singleton<GameWorld>.Instance;
+                //coopGameComponent = gameWorld.GetOrAddComponent<CoopGameComponent>();
+                // Player spawns before Bots. This must occur here to clear out previous session.
                 CoopGameComponent.Players.Clear();
                 // TODO: Shouldnt this be a member variable, not static?
                 CoopGameComponent.Players.TryAdd(PatchConstants.GetPlayerProfileAccountId(profile), p);
@@ -90,6 +91,10 @@ namespace SIT.Coop.Core.LocalGame
 
                 Dictionary<string, object> dictionary2 = new Dictionary<string, object>
                     {
+                        {
+                            "SERVER",
+                            "SERVER"
+                        },
                         {
                             "accountId",
                             p.Profile.AccountId
@@ -124,10 +129,10 @@ namespace SIT.Coop.Core.LocalGame
                             p.Profile.Inventory.Equipment.CloneItem().ToJson()
                         }
                     };
-                new Request().PostJson("/client/match/group/server/players/spawn", dictionary2.ToJson());
-                //ServerCommunication.PostLocalPlayerData(p, dictionary2);
+                //new Request().PostJson("/client/match/group/server/players/spawn", dictionary2.ToJson());
+                ServerCommunication.PostLocalPlayerData(p, dictionary2);
 
-                if(Matchmaker.MatchmakerAcceptPatches.IsServer)
+                if (Matchmaker.MatchmakerAcceptPatches.IsServer)
                 {
                     Dictionary<string, object> value2 = new Dictionary<string, object>
                         {
@@ -141,6 +146,8 @@ namespace SIT.Coop.Core.LocalGame
                             }
                         };
                     new Request().PostJson("/client/match/group/server/setPlayersSpawnPoint", JsonConvert.SerializeObject(value2));
+                    ServerCommunication.SendDataDownWebSocket(dictionary2);
+
                 }
                 else if (Matchmaker.MatchmakerAcceptPatches.IsClient)
                 {
