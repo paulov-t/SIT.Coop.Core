@@ -1,4 +1,6 @@
-﻿using SIT.Tarkov.Core;
+﻿using EFT.Interactive;
+using SIT.Coop.Core.Web;
+using SIT.Tarkov.Core;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -22,21 +24,26 @@ namespace SIT.Coop.Core.Player
 
         internal List<Vector2> ClientListRotationsToSend { get; } = new List<Vector2>();
         internal ConcurrentQueue<Vector2> ReceivedRotationPackets { get; } = new ConcurrentQueue<Vector2>();
-
+        public float LastTiltLevel { get; private set; }
 
         void Awake()
         {
-            PatchConstants.Logger.LogInfo("PlayerReplicatedComponent:Awake");
+            //PatchConstants.Logger.LogInfo("PlayerReplicatedComponent:Awake");
         }
 
         void Start()
         {
-            PatchConstants.Logger.LogInfo("PlayerReplicatedComponent:Start");
+            //PatchConstants.Logger.LogInfo("PlayerReplicatedComponent:Start");
+
+            if (this.listOfInteractiveObjects == null)
+            {
+                this.listOfInteractiveObjects = FindObjectsOfType<WorldInteractiveObject>();
+            }
         }
 
 
+        private WorldInteractiveObject[] listOfInteractiveObjects;
 
-        
 
         void FixedUpdate()
         {
@@ -50,11 +57,18 @@ namespace SIT.Coop.Core.Player
             if (player == null)
                 return;
 
+            if (this.listOfInteractiveObjects == null)
+            {
+                this.listOfInteractiveObjects = FindObjectsOfType<WorldInteractiveObject>();
+            }
+
             UpdateMovement();
 
-            if (!handlingPackets && player != null)
+            if (!handlingPackets && player != null && QueuedPackets.Any())
             {
                 handlingPackets = true;
+
+                //PatchConstants.Logger.LogInfo($"QueuedPackets.Length:{QueuedPackets.Count}");
 
                 if (QueuedPackets.TryDequeue(out Dictionary<string, object> packet))
                 {
@@ -70,7 +84,7 @@ namespace SIT.Coop.Core.Player
                     switch (method)
                     {
                         case "Damage":
-                            PatchConstants.Logger.LogInfo("Damage");
+                            //PatchConstants.Logger.LogInfo("Damage");
                             PlayerOnDamagePatch.DamageReplicated(player, packet);
                             break;
                         case "Dead":
@@ -80,9 +94,10 @@ namespace SIT.Coop.Core.Player
                             PatchConstants.Logger.LogInfo("Door");
                             break;
                         case "Move":
-                            LastMovementPacket = packet;
-
-                            //PlayerOnMovePatch.MoveReplicated(player, packet);
+                            if(LastMovementPacket == null 
+                                || int.Parse(packet["seq"].ToString()) > int.Parse(LastMovementPacket["seq"].ToString())
+                                )
+                                LastMovementPacket = packet;
                             break;
                         case "RotateBatch":
                             var rotationBatch = Json.Deserialize<List<Vector2>>(Json.Serialize(packet["batch"]));
@@ -102,13 +117,16 @@ namespace SIT.Coop.Core.Player
                         case "Say":
                             break;
                         case "SetTriggerPressed":
-                            PatchConstants.Logger.LogInfo("SetTriggerPressed");
+                            //PatchConstants.Logger.LogInfo("SetTriggerPressed");
                             break;
                         case "SetItemsInHands":
                             PatchConstants.Logger.LogInfo("SetItemsInHands");
                             break;
                         case "InventoryOpened":
                             PlayerOnInventoryOpenedPatch.InventoryOpenedReplicated(player, packet);
+                            break;
+                        case "Tilt":
+                            PlayerOnTiltPatch.TiltReplicated(player, packet);
                             break;
 
                     }
@@ -117,10 +135,39 @@ namespace SIT.Coop.Core.Player
             }
         }
 
+        public void DequeueAllMovementPackets()
+        {
+            if (QueuedPackets.Any())
+            {
+                handlingPackets = true;
+
+                //PatchConstants.Logger.LogInfo($"QueuedPackets.Length:{QueuedPackets.Count}");
+
+                if (QueuedPackets.TryDequeue(out Dictionary<string, object> packet))
+                {
+                    var method = packet["m"].ToString();
+                    if(method != "Move")
+                    {
+                        QueuedPackets.Enqueue(packet);
+                    }
+                }
+            }
+        }
+
         private void UpdateMovement()
         {
             if (player == null)
                 return;
+
+
+            if (player.MovementContext != null && this.LastTiltLevel != player.MovementContext.Tilt)
+            {
+                this.LastTiltLevel = player.MovementContext.Tilt;
+                Dictionary<string, object> dictionary = new Dictionary<string, object>();
+                dictionary.Add("tilt", LastTiltLevel);
+                dictionary.Add("m", "Tilt");
+                ServerCommunication.PostLocalPlayerData(player, dictionary);
+            }
 
             if (LastMovementPacket == null)
                 return;
@@ -128,11 +175,11 @@ namespace SIT.Coop.Core.Player
             //if (LastRotationPacket == null)
             //    return;
 
-            if (LastMovementPacket.ContainsKey("t") && long.Parse(LastMovementPacket["t"].ToString()) < DateTime.Now.AddSeconds(-10).Ticks)
-            {
-                LastMovementPacket = null;
-                return;
-            }
+            //if (LastMovementPacket.ContainsKey("t") && long.Parse(LastMovementPacket["t"].ToString()) < DateTime.Now.AddSeconds(-10).Ticks)
+            //{
+            //    LastMovementPacket = null;
+            //    return;
+            //}
 
             PlayerOnMovePatch.MoveReplicated(player, LastMovementPacket);
 
