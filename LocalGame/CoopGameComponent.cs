@@ -234,7 +234,7 @@ namespace SIT.Coop.Core.LocalGame
 					{
                     var pEquip = parsedDict["p.equip"].ToString();
                     //var equipmentJT = JsonConvert.DeserializeObject<JToken>(pEquip);
-                    var equipment = parsedDict["p.equip"].ToString().ParseJsonTo<GClass2136>(Array.Empty<JsonConverter>());
+                    var equipment = parsedDict["p.equip"].ToString().ParseJsonTo<GClass2140>(Array.Empty<JsonConverter>());
                     //profile.Inventory.Equipment
                     profile.Inventory.Equipment = equipment;
                 }
@@ -339,9 +339,9 @@ namespace SIT.Coop.Core.LocalGame
 						, PatchConstants.CharacterControllerSettings.ClientPlayerMode
 						, () => 1f
 						, () => 1f
-						, (GInterface117)Activator.CreateInstance(PatchConstants.TypeDictionary["StatisticsSession"])
+						, (GInterface118)Activator.CreateInstance(PatchConstants.TypeDictionary["StatisticsSession"])
 						//, (GInterface74)PatchConstants.GetFieldFromType(PatchConstants.TypeDictionary["FilterCustomization"], "Default").GetValue(null)
-						,GClass1268.Default
+						,GClass1271.Default
 						, null
 						, false
 					);
@@ -682,7 +682,7 @@ namespace SIT.Coop.Core.LocalGame
 						if (allPrefabPaths.Count() > 0)
                         {
 							Singleton<JobScheduler>.Instance.SetForceMode(enable: true);
-							await Singleton<GClass1556>.Instance.LoadBundlesAndCreatePools(GClass1556.PoolsCategory.Raid, GClass1556.AssemblyType.Local, allPrefabPaths.ToArray(), GClass2633.General, new GClass2554<GStruct94>(delegate (GStruct94 p)
+							await Singleton<GClass1560>.Instance.LoadBundlesAndCreatePools(GClass1560.PoolsCategory.Raid, GClass1560.AssemblyType.Local, allPrefabPaths.ToArray(), GClass2637.General, new GClass2558<GStruct94>(delegate (GStruct94 p)
 							{
 								//this.QuickLog($"Update::Loading a new Player {newPlayerToSpawn.Item1.AccountId}:{p.Stage}:{p.Progress}");
 
@@ -775,7 +775,7 @@ namespace SIT.Coop.Core.LocalGame
 
 		private void SetWeaponInHandsOfNewPlayer(LocalPlayer person)
 		{
-			GClass2136 equipment = person.Profile.Inventory.Equipment;
+			GClass2140 equipment = person.Profile.Inventory.Equipment;
 			if (equipment == null)
 			{
 				return;
@@ -785,7 +785,7 @@ namespace SIT.Coop.Core.LocalGame
 			{
 				return;
 			}
-			person.SetItemInHands(item, delegate (Result<GInterface98> result)
+			person.SetItemInHands(item, delegate (Result<GInterface99> result)
 			{
 				if (result.Failed)
 				{
