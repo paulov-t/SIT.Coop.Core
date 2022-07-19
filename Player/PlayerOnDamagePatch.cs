@@ -10,11 +10,19 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using SIT.Tarkov.Core.PlayerPatches.Health;
+using EFT.InventoryLogic;
 
 namespace SIT.Coop.Core.Player
 {
     internal class PlayerOnDamagePatch : ModulePatch
     {
+        private static Type BeingHitType;
+
+        public PlayerOnDamagePatch()
+        {
+            BeingHitType = PatchConstants.EftTypes.Single(x => PatchConstants.GetMethodForType(x, "BeingHitAction") != null);
+        }
+
         protected override MethodBase GetTargetMethod()
         {
             var t = SIT.Tarkov.Core.PatchConstants.EftTypes.FirstOrDefault(x => x.FullName == "EFT.Player");
@@ -121,7 +129,7 @@ namespace SIT.Coop.Core.Player
 
             if (autoKillThisCunt)
             {
-                //ActiveHealthController.Kill(damageType);
+                Kill(ActiveHealthController, damageType);
                 return;
             }
 
@@ -173,13 +181,52 @@ namespace SIT.Coop.Core.Player
             {
                 //UnityEngine.Debug.LogError($"ClientApplyDamageInfo::Common Health, killing");
 
-                PatchConstants.GetAllMethodsForObject(ActiveHealthController).Single(x => x.Name == "Kill").Invoke(ActiveHealthController, new object[] { damageType });
+                Kill(ActiveHealthController, damageType);
             }
 
             if (!isAlive)
                 return;
 
             //ActiveHealthController.DoWoundRelapse(damageInfo.Damage, bodyPartType);
+        }
+
+        private static void Kill(object activeHealthController, EDamageType damageType)
+        {
+            if (activeHealthController == null)
+                return;
+
+            PatchConstants.GetMethodForType(activeHealthController.GetType(), "Kill").Invoke(activeHealthController, new object[] { damageType });
+        }
+
+        private static void BeingHitAction(object damageInfo, EFT.Player player)
+        {
+            var singletonBeingHit = PatchConstants.GetSingletonInstance(BeingHitType);
+            if (singletonBeingHit == null)
+                return;
+
+            PatchConstants.GetMethodForType(singletonBeingHit.GetType(), "BeingHitAction")
+                .Invoke(singletonBeingHit, new object[]
+                {
+                    damageInfo
+                    , player
+                });
+
+        }
+
+        private static void TryApplySideEffects(object activeHealthController, EDamageType damageType, EBodyPart bodyPart, out SideEffectComponent sideEffectComponent)
+        {
+            sideEffectComponent = null;
+            if (activeHealthController == null)
+                return;
+
+            PatchConstants.GetMethodForType(activeHealthController.GetType(), "TryApplySideEffects")
+                .Invoke(activeHealthController, new object[] 
+                { 
+                    damageType
+                    , bodyPart
+                    , sideEffectComponent
+                });
+
         }
     }
 }
