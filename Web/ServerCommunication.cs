@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using SIT.Coop.Core.Matchmaker;
+using Newtonsoft.Json;
 
 namespace SIT.Coop.Core.Web
 {
@@ -33,6 +34,12 @@ namespace SIT.Coop.Core.Web
 
         public delegate void OnDataReceivedHandler(byte[] buffer);
 		public static event OnDataReceivedHandler OnDataReceived;
+
+		public delegate void OnDataStringReceivedHandler(string @string);
+		public static event OnDataStringReceivedHandler OnDataStringReceived;
+
+		public delegate void OnDataArrayReceivedHandler(string[] array);
+		public static event OnDataArrayReceivedHandler OnDataArrayReceived;
 
 		public static void CloseAllUdpClients()
 		{
@@ -87,12 +94,14 @@ namespace SIT.Coop.Core.Web
 			udpClient.Client.ReceiveTimeout = 0;
 			udpClient.Client.SendTimeout = 0;
 			udpClient.BeginReceive(ReceiveUdp, udpClient);
-			var connectMessage = "Connect=" + SIT.Tarkov.Core.PatchConstants.GetPHPSESSID();
-			PatchConstants.Logger.LogInfo(connectMessage);
-			var connectMessageBytes = Encoding.UTF8.GetBytes(connectMessage);
-			udpClient.Send(connectMessageBytes, connectMessageBytes.Length);
-			//udpClient.BeginSend(Encoding.UTF8.GetBytes("Connect="), Encoding.UTF8.GetBytes("Connect=").Length, (IAsyncResult ar) => { }, null);
-
+			if (MatchmakerAcceptPatches.IsClient)
+			{
+				var connectMessage = "Connect=" + SIT.Tarkov.Core.PatchConstants.GetPHPSESSID();
+				PatchConstants.Logger.LogInfo(connectMessage);
+				var connectMessageBytes = Encoding.UTF8.GetBytes(connectMessage);
+				udpClient.Send(connectMessageBytes, connectMessageBytes.Length);
+				//udpClient.BeginSend(Encoding.UTF8.GetBytes("Connect="), Encoding.UTF8.GetBytes("Connect=").Length, (IAsyncResult ar) => { }, null);
+			}
 			if (!udpClients.Contains(udpClient))
 				udpClients.Add(udpClient);
 
@@ -110,6 +119,22 @@ namespace SIT.Coop.Core.Web
 			if (OnDataReceived != null)
 			{
 				OnDataReceived(data);
+			}
+			string @string = UTF8Encoding.UTF8.GetString(data);
+			if (@string.Length > 0 && @string[0] == '{' && @string[@string.Length - 1] == '}')
+            {
+				if(OnDataStringReceived != null)
+                {
+					OnDataStringReceived(@string);
+                }
+            }
+			if (@string.Length > 0 && @string[0] == '[' && @string[@string.Length - 1] == ']')
+			{
+				var stringArray = JsonConvert.DeserializeObject<string[]>(@string);
+				if (OnDataArrayReceived != null)
+				{
+					OnDataArrayReceived(stringArray);
+				}
 			}
 			udpClient.BeginReceive(ReceiveUdp, udpClient);
 		}
