@@ -190,8 +190,8 @@ namespace SIT.Coop.Core.LocalGame
 			}
 
 			if (
-			//	!Players.ContainsKey(accountId) && LocalGamePatches.MyPlayerProfile.AccountId != accountId
-			//	&&
+				!Players.ContainsKey(accountId) && LocalGamePatches.MyPlayerProfile.AccountId != accountId
+				&&
 				!PlayersToSpawn.ContainsKey(accountId)
 				)
 			{
@@ -207,9 +207,13 @@ namespace SIT.Coop.Core.LocalGame
 					profile.Info.Side = isBot ? EPlayerSide.Savage : EPlayerSide.Usec;
 					if (parsedDict.ContainsKey("p.info"))
 					{
-						var jobInfo = JObject.Parse(parsedDict["p.info"].ToString());
-						profile.Info.Nickname = jobInfo.Property("Nickname").Value.ToString();
-						profile.Info.Side = (EPlayerSide)Enum.Parse(typeof(EPlayerSide), jobInfo.Property("Side").Value.ToString());
+						var profileInfo = JObject.Parse(parsedDict["p.info"].ToString());
+						profile.Info.Nickname = profileInfo.Property("Nickname").Value.ToString();
+						profile.Info.Side = (EPlayerSide)Enum.Parse(typeof(EPlayerSide), profileInfo.Property("Side").Value.ToString());
+						if(profileInfo.ContainsKey("Voice"))
+                        {
+							profile.Info.Voice = profileInfo["Voice"].ToString();
+						}
 						//var info = parsedDict["p.info"].ToString().ParseJsonTo<GClass1443>(Array.Empty<JsonConverter>());
 						//if (info != null)
 						//{
@@ -221,7 +225,7 @@ namespace SIT.Coop.Core.LocalGame
 					if (parsedDict.ContainsKey("p.cust"))
 					{
 						var parsedCust = parsedDict["p.cust"].ToString().ParseJsonTo<Dictionary<EBodyModelPart, string>>(Array.Empty<JsonConverter>());
-						if (parsedCust != null && parsedCust.Any()) 
+						if (parsedCust != null && parsedCust.Any())
 						{
 							PatchConstants.SetFieldOrPropertyFromInstance(
 								profile
@@ -232,35 +236,23 @@ namespace SIT.Coop.Core.LocalGame
 					}
 					if (parsedDict.ContainsKey("p.equip"))
 					{
-                    var pEquip = parsedDict["p.equip"].ToString();
-                    //var equipmentJT = JsonConvert.DeserializeObject<JToken>(pEquip);
-                    var equipment = parsedDict["p.equip"].ToString().ParseJsonTo<GClass2140>(Array.Empty<JsonConverter>());
-                    //profile.Inventory.Equipment
-                    profile.Inventory.Equipment = equipment;
-                }
+						var pEquip = parsedDict["p.equip"].ToString();
+						var equipment = parsedDict["p.equip"].ToString().ParseJsonTo<GClass2140>(Array.Empty<JsonConverter>());
+						profile.Inventory.Equipment = equipment;
+					}
 					if (parsedDict.ContainsKey("isHost"))
 					{
 					}
-					//if (isBot)
-					//{
-					//	this.BotsToSpawn.Enqueue((profile, newPosition, false));
-					//}
-					//else
-					//{
+					
 					this.PlayersToSpawn.TryAdd(accountId, (profile, newPosition, ESpawnState.NotLoaded));
-					//}
 				}
 				catch (Exception ex)
 				{
 					QuickLog($"DataReceivedClient_PlayerBotSpawn::ERROR::" + ex.Message);
-					//QuickLog(ex.ToString());
 				}
-            }
-            //else
-            //{
-            //             //QuickLog($"DataReceivedClient_PlayerBotSpawn::Attempting to Re-Process {accountId}, ignoring");
-            //         }
-        }
+			}
+			
+		}
 
 
 
@@ -283,6 +275,15 @@ namespace SIT.Coop.Core.LocalGame
 					return null;
 				}
 
+				if (Players.ContainsKey(profile.AccountId))
+				{
+					QuickLog("Profile already exists. ignoring.");
+					var newPlayerToSpawn = PlayersToSpawn[profile.AccountId];
+					newPlayerToSpawn.Item3 = ESpawnState.Spawned;
+					PlayersToSpawn[profile.AccountId] = newPlayerToSpawn;
+					return null;
+				}
+
 				int playerId = Players.Count + 1;
 				if(profile == null)
                 {
@@ -302,26 +303,7 @@ namespace SIT.Coop.Core.LocalGame
 					return null;
 				}
 
-				//if(PatchConstants.GetFieldFromType(PatchConstants.TypeDictionary["FilterCustomization"], "Default").GetValue(null) == null)
-    //            {
-				//	QuickLog("FilterCustomization is NULL wtf!");
-				//	return null;
-				//}
-
 				profile.SetSpawnedInSession(true);
-
-				/* TODO. Do this shit next private static async Task<object> CallGetByReflection(IFoo foo, IBar bar)
-        {
-            var method = typeof(IFoo).GetMethod(nameof(IFoo.Get));
-            var generic = method.MakeGenericMethod(bar.GetType());
-            var task = (Task) generic.Invoke(foo, new[] {bar});
-
-            await task.ConfigureAwait(false);
-
-            var resultProperty = task.GetType().GetProperty("Result");
-            return resultProperty.GetValue(task);
-        }
-				 */
 
 				var localPlayer = await EFT.LocalPlayer.Create(
 						playerId
@@ -418,10 +400,6 @@ namespace SIT.Coop.Core.LocalGame
 
 		public static ConcurrentQueue<Dictionary<string, object>> QueuedPackets { get; } = new ConcurrentQueue<Dictionary<string, object>>();
 
-		public static ConcurrentDictionary<EFT.LocalPlayer, Dictionary<string, object>> ServerReliablePackets { get; } 
-			= new ConcurrentDictionary<EFT.LocalPlayer, Dictionary<string, object>>();
-
-
 		void RunQueuedActions()
 		{
 			if (QueuedPackets.Any())
@@ -469,197 +447,197 @@ namespace SIT.Coop.Core.LocalGame
             }
 		}
 
-		DateTime? LastParityCheck = DateTime.Now;
+		//DateTime? LastParityCheck = DateTime.Now;
 
-		async void UpdateParityCheck()
-		{
-			if (MatchmakerAcceptPatches.IsSinglePlayer)
-				return;
+		//async void UpdateParityCheck()
+		//{
+		//	if (MatchmakerAcceptPatches.IsSinglePlayer)
+		//		return;
 
-			await Task.Run(() => {
-				try
-				{
-					//if (Status != GameStatus.Stopped && this.LastParityCheck < DateTime.Now.AddSeconds(-5.0))
-					if (this.LastParityCheck < DateTime.Now.AddSeconds(-5.0))
-					{
-						this.LastParityCheck = DateTime.Now;
-						Dictionary<string, object> dictionary = new Dictionary<string, object>();
-						dictionary.Add("m", "clientRequestForParity");
-						//QuickLog("RunParityCheck:" + MatchmakerAcceptPatches.GetGroupId());
-						dictionary.Add("groupId", MatchmakerAcceptPatches.GetGroupId());
-						//dictionary.Add("count", (this.BotDictionary.Count + this.Players.Count).ToString());
-						dictionary.Add("count", Players.Count);
-						//if (MatchmakerAcceptPatches.IsClient)
-						//{
-						//	dictionary.Add("botKeys", JsonConvert.SerializeObject(this.BotDictionary.Keys));
-						//	dictionary.Add("playerKeys", JsonConvert.SerializeObject(this.Players.Keys));
-						//}
-						if (MatchmakerAcceptPatches.IsServer)
-						{
-							//dictionary.Add("gameTime", this.dateTime_0.ToString());
-							//List<Dictionary<string, object>> list = new List<Dictionary<string, object>>();
-							//dictionary.Add("botData", list);
-							//foreach (KeyValuePair<string, Player> item in this.BotDictionary)
-							//{
-							//	Dictionary<string, object> dictionary2 = new Dictionary<string, object>();
-							//	dictionary2.Add("accountId", item.Key);
-							//	dictionary2.Add("profileId", item.Key);
-							//	dictionary2.Add("sPx", item.Value.Position.x);
-							//	dictionary2.Add("sPy", item.Value.Position.y);
-							//	dictionary2.Add("sPz", item.Value.Position.z);
-							//	dictionary2.Add("p.info", item.Value.Profile.Info);
-							//	dictionary2.Add("p.cust", item.Value.Profile.Customization);
-							//	dictionary2.Add("p.equip", item.Value.Profile.Inventory.Equipment);
-							//	list.Add(dictionary2);
-							//}
-							//dictionary["botData"] = list;
-							List<Dictionary<string, object>> list2 = new List<Dictionary<string, object>>();
-							dictionary.Add("playerData", list2);
-							foreach (KeyValuePair<string, EFT.LocalPlayer> player in Players)
-							{
+		//	await Task.Run(() => {
+		//		try
+		//		{
+		//			//if (Status != GameStatus.Stopped && this.LastParityCheck < DateTime.Now.AddSeconds(-5.0))
+		//			if (this.LastParityCheck < DateTime.Now.AddSeconds(-5.0))
+		//			{
+		//				this.LastParityCheck = DateTime.Now;
+		//				Dictionary<string, object> dictionary = new Dictionary<string, object>();
+		//				dictionary.Add("m", "clientRequestForParity");
+		//				//QuickLog("RunParityCheck:" + MatchmakerAcceptPatches.GetGroupId());
+		//				dictionary.Add("groupId", MatchmakerAcceptPatches.GetGroupId());
+		//				//dictionary.Add("count", (this.BotDictionary.Count + this.Players.Count).ToString());
+		//				dictionary.Add("count", Players.Count);
+		//				//if (MatchmakerAcceptPatches.IsClient)
+		//				//{
+		//				//	dictionary.Add("botKeys", JsonConvert.SerializeObject(this.BotDictionary.Keys));
+		//				//	dictionary.Add("playerKeys", JsonConvert.SerializeObject(this.Players.Keys));
+		//				//}
+		//				if (MatchmakerAcceptPatches.IsServer)
+		//				{
+		//					//dictionary.Add("gameTime", this.dateTime_0.ToString());
+		//					//List<Dictionary<string, object>> list = new List<Dictionary<string, object>>();
+		//					//dictionary.Add("botData", list);
+		//					//foreach (KeyValuePair<string, Player> item in this.BotDictionary)
+		//					//{
+		//					//	Dictionary<string, object> dictionary2 = new Dictionary<string, object>();
+		//					//	dictionary2.Add("accountId", item.Key);
+		//					//	dictionary2.Add("profileId", item.Key);
+		//					//	dictionary2.Add("sPx", item.Value.Position.x);
+		//					//	dictionary2.Add("sPy", item.Value.Position.y);
+		//					//	dictionary2.Add("sPz", item.Value.Position.z);
+		//					//	dictionary2.Add("p.info", item.Value.Profile.Info);
+		//					//	dictionary2.Add("p.cust", item.Value.Profile.Customization);
+		//					//	dictionary2.Add("p.equip", item.Value.Profile.Inventory.Equipment);
+		//					//	list.Add(dictionary2);
+		//					//}
+		//					//dictionary["botData"] = list;
+		//					List<Dictionary<string, object>> list2 = new List<Dictionary<string, object>>();
+		//					dictionary.Add("playerData", list2);
+		//					foreach (KeyValuePair<string, EFT.LocalPlayer> player in Players)
+		//					{
 
-								Dictionary<string, object> playerData = new Dictionary<string, object>();
-								playerData.Add("accountId", player.Key);
-								playerData.Add("profileId", player.Key);
-								var p = GetPlayerByAccountId(player.Key);
-								if (p != null)
-								{
-									var pp = PatchConstants.GetPlayerProfile(p);
-									//if(pp != null)
-									//                              {
-									//	var ppInfo = PatchConstants.GetFieldOrPropertyFromInstance<object>(pp, "Info");
-									//	if (ppInfo != null)
-									//                                  {
-									//		playerData.Add("p.info", ppInfo);
-									//	}
+		//						Dictionary<string, object> playerData = new Dictionary<string, object>();
+		//						playerData.Add("accountId", player.Key);
+		//						playerData.Add("profileId", player.Key);
+		//						var p = GetPlayerByAccountId(player.Key);
+		//						if (p != null)
+		//						{
+		//							var pp = PatchConstants.GetPlayerProfile(p);
+		//							//if(pp != null)
+		//							//                              {
+		//							//	var ppInfo = PatchConstants.GetFieldOrPropertyFromInstance<object>(pp, "Info");
+		//							//	if (ppInfo != null)
+		//							//                                  {
+		//							//		playerData.Add("p.info", ppInfo);
+		//							//	}
 
-									//	var ppCust = PatchConstants.GetFieldOrPropertyFromInstance<object>(pp, "Customization");
-									//	if (ppCust != null)
-									//	{
-									//		playerData.Add("p.cust", ppCust);
-									//	}
-									//}
-								}
-								playerData.Add("sPx", player.Value.Position.x);
-								playerData.Add("sPy", player.Value.Position.y);
-								playerData.Add("sPz", player.Value.Position.z);
-								playerData.Add("p.info", player.Value.Profile.Info);
-								playerData.Add("p.cust", player.Value.Profile.Customization);
-								playerData.Add("p.equip", player.Value.Profile.Inventory.Equipment);
-								list2.Add(playerData);
-							}
-							dictionary["playerData"] = list2;
-						}
+		//							//	var ppCust = PatchConstants.GetFieldOrPropertyFromInstance<object>(pp, "Customization");
+		//							//	if (ppCust != null)
+		//							//	{
+		//							//		playerData.Add("p.cust", ppCust);
+		//							//	}
+		//							//}
+		//						}
+		//						playerData.Add("sPx", player.Value.Position.x);
+		//						playerData.Add("sPy", player.Value.Position.y);
+		//						playerData.Add("sPz", player.Value.Position.z);
+		//						playerData.Add("p.info", player.Value.Profile.Info);
+		//						playerData.Add("p.cust", player.Value.Profile.Customization);
+		//						playerData.Add("p.equip", player.Value.Profile.Inventory.Equipment);
+		//						list2.Add(playerData);
+		//					}
+		//					dictionary["playerData"] = list2;
+		//				}
 
-						//MatchMakerAcceptScreen.ServerCommunicationCoopImplementation.SendDataDownWebSocket(dictionary);
+		//				//MatchMakerAcceptScreen.ServerCommunicationCoopImplementation.SendDataDownWebSocket(dictionary);
 
-						string text = new Request().PostJson("/client/match/group/server/parity", dictionary.SITToJson());
-						if (!string.IsNullOrEmpty(text))
-						{
-							//QuickLog(text);
-							ParityCheckHandleReturn(text);
-						}
+		//				//string text = new Request().PostJson("/client/match/group/server/parity", dictionary.SITToJson());
+		//				//if (!string.IsNullOrEmpty(text))
+		//				//{
+		//				//	//QuickLog(text);
+		//				//	ParityCheckHandleReturn(text);
+		//				//}
 
-						//string text2 = new Request().PostJson("/client/match/group/server/parity/players", dictionary.ToJson());
-						//ParityCheckHandleReturn(text2);
+		//				//string text2 = new Request().PostJson("/client/match/group/server/parity/players", dictionary.ToJson());
+		//				//ParityCheckHandleReturn(text2);
 
-						//string text3 = new Request().PostJson("/client/match/group/server/parity/bots", dictionary.ToJson());
-						//ParityCheckHandleReturn(text3);
+		//				//string text3 = new Request().PostJson("/client/match/group/server/parity/bots", dictionary.ToJson());
+		//				//ParityCheckHandleReturn(text3);
 
-						//string text4 = new Request().PostJson("/client/match/group/server/parity/dead/get",
-						//	data: MatchmakerAcceptPatches.GetGroupId().ToJson());
-						//if (text != "ERROR")
-						//{
-						//	QuickLog(text4);
-						//}
-					}
+		//				//string text4 = new Request().PostJson("/client/match/group/server/parity/dead/get",
+		//				//	data: MatchmakerAcceptPatches.GetGroupId().ToJson());
+		//				//if (text != "ERROR")
+		//				//{
+		//				//	QuickLog(text4);
+		//				//}
+		//			}
 
-				}
-				catch (Exception)
-				{
-					//QuickLog("ParityCheck::ERROR::" + ex.ToString());
-				}
-			});
-		}
+		//		}
+		//		catch (Exception)
+		//		{
+		//			//QuickLog("ParityCheck::ERROR::" + ex.ToString());
+		//		}
+		//	});
+		//}
 
-		private void ParityCheckHandleReturn(string text)
-		{
-			try
-			{
-				if (!string.IsNullOrEmpty(text) && !text.StartsWith("OK") && !text.Contains("ERROR"))
-				{
-					//var dictionary = text.ParseJsonTo<Dictionary<string, object>>(Array.Empty<JsonConverter>());
-					var dictionary = text.SITParseJson<Dictionary<string, object>>();
-					if (dictionary == null)
-						return;
+		//private void ParityCheckHandleReturn(string text)
+		//{
+		//	try
+		//	{
+		//		if (!string.IsNullOrEmpty(text) && !text.StartsWith("OK") && !text.Contains("ERROR"))
+		//		{
+		//			//var dictionary = text.ParseJsonTo<Dictionary<string, object>>(Array.Empty<JsonConverter>());
+		//			var dictionary = text.SITParseJson<Dictionary<string, object>>();
+		//			if (dictionary == null)
+		//				return;
 
-					if (dictionary.Count > 0)
-					{
-						//this.QuickLog("ParityCheck::Data Received from Central Server::" + text.Length);
-						if (dictionary.ContainsKey("players"))
-						{
-							List<Dictionary<string, object>> returnedPlayers = dictionary["players"].ToJson().ParseJsonTo<List<Dictionary<string, object>>>(Array.Empty<JsonConverter>());
-							if (returnedPlayers != null)
-							{
-								//this.QuickLog("ParityCheck::Data Received from Central Server::PlayerListData::Count::" + list3.Count);
-								//foreach (var item in list3)
-								//{
-								//	QuickLog(string.Join(", ", item.Keys));
-								//}
-								foreach (var item in returnedPlayers)
-								{
-									if (item == null)
-										continue;
+		//			if (dictionary.Count > 0)
+		//			{
+		//				//this.QuickLog("ParityCheck::Data Received from Central Server::" + text.Length);
+		//				if (dictionary.ContainsKey("players"))
+		//				{
+		//					List<Dictionary<string, object>> returnedPlayers = dictionary["players"].ToJson().ParseJsonTo<List<Dictionary<string, object>>>(Array.Empty<JsonConverter>());
+		//					if (returnedPlayers != null)
+		//					{
+		//						//this.QuickLog("ParityCheck::Data Received from Central Server::PlayerListData::Count::" + list3.Count);
+		//						//foreach (var item in list3)
+		//						//{
+		//						//	QuickLog(string.Join(", ", item.Keys));
+		//						//}
+		//						foreach (var item in returnedPlayers)
+		//						{
+		//							if (item == null)
+		//								continue;
 
-									if (item.ContainsKey("accountId"))
-									{
-										string accountId = item["accountId"].ToString();
-										if (Players == null || Players.Count == 0)
-											continue;
+		//							if (item.ContainsKey("accountId"))
+		//							{
+		//								string accountId = item["accountId"].ToString();
+		//								if (Players == null || Players.Count == 0)
+		//									continue;
 
-										if (OldPlayers.ContainsKey(accountId))
-											continue;
+		//								if (OldPlayers.ContainsKey(accountId))
+		//									continue;
 
-										Vector3 newPosition = Players.First().Value.Position;
-										if (item.ContainsKey("sPx") && item.ContainsKey("sPy") && item.ContainsKey("sPz"))
-										{
-											string npxString = item["sPx"].ToString();
-											newPosition.x = float.Parse(npxString);
-											string npyString = item["sPy"].ToString();
-											newPosition.y = float.Parse(npyString);
-											string npzString = item["sPz"].ToString();
-											newPosition.z = float.Parse(npzString);
+		//								Vector3 newPosition = Players.First().Value.Position;
+		//								if (item.ContainsKey("sPx") && item.ContainsKey("sPy") && item.ContainsKey("sPz"))
+		//								{
+		//									string npxString = item["sPx"].ToString();
+		//									newPosition.x = float.Parse(npxString);
+		//									string npyString = item["sPy"].ToString();
+		//									newPosition.y = float.Parse(npyString);
+		//									string npzString = item["sPz"].ToString();
+		//									newPosition.z = float.Parse(npzString);
 
-											//QuickLog("New Position found for Spawning Player");
-										}
-										this.DataReceivedClient_PlayerBotSpawn(item, accountId, item["profileId"].ToString(), newPosition, false);
-									}
-									else
-									{
-										this.QuickLog("couldn't process parity data, no accountId");
-									}
-								}
-							}
-							else
-							{
-								this.QuickLog("ParityCheck::Data Received from Central Server::Unable to convert playersListData");
-							}
-						}
+		//									//QuickLog("New Position found for Spawning Player");
+		//								}
+		//								this.DataReceivedClient_PlayerBotSpawn(item, accountId, item["profileId"].ToString(), newPosition, false);
+		//							}
+		//							else
+		//							{
+		//								this.QuickLog("couldn't process parity data, no accountId");
+		//							}
+		//						}
+		//					}
+		//					else
+		//					{
+		//						this.QuickLog("ParityCheck::Data Received from Central Server::Unable to convert playersListData");
+		//					}
+		//				}
 
-						if (dictionary.ContainsKey("dead"))
-						{
-							List<Dictionary<string, object>> deads = dictionary["dead"].ToJson().ParseJsonTo<List<Dictionary<string, object>>>(Array.Empty<JsonConverter>());
-							QuickLog($"Received: {deads.Count} dead people");
-						}
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				QuickLog("ParityCheckHandleReturn ERROR");
-				QuickLog(ex.ToString());
-			}
-		}
+		//				if (dictionary.ContainsKey("dead"))
+		//				{
+		//					List<Dictionary<string, object>> deads = dictionary["dead"].ToJson().ParseJsonTo<List<Dictionary<string, object>>>(Array.Empty<JsonConverter>());
+		//					QuickLog($"Received: {deads.Count} dead people");
+		//				}
+		//			}
+		//		}
+		//	}
+		//	catch (Exception ex)
+		//	{
+		//		QuickLog("ParityCheckHandleReturn ERROR");
+		//		QuickLog(ex.ToString());
+		//	}
+		//}
 
 		private async void UpdateClientSpawnPlayers()
 		{
@@ -668,9 +646,14 @@ namespace SIT.Coop.Core.LocalGame
 				if (!PlayersToSpawn.Any())
 					return;
 
+
 				var taskScheduler = TaskScheduler.FromCurrentSynchronizationContext();
 
 				var accountId = PlayersToSpawn.Keys.First();
+				if (Players.ContainsKey(accountId))
+					// if this keeps occuring then something is stuck underneath!
+					return; 
+
 				var newPlayerToSpawn = PlayersToSpawn[accountId];
 
 				switch (newPlayerToSpawn.Item3)
@@ -682,40 +665,14 @@ namespace SIT.Coop.Core.LocalGame
 						if (allPrefabPaths.Count() > 0)
                         {
 							Singleton<JobScheduler>.Instance.SetForceMode(enable: true);
-							await Singleton<GClass1560>.Instance.LoadBundlesAndCreatePools(GClass1560.PoolsCategory.Raid, GClass1560.AssemblyType.Local, allPrefabPaths.ToArray(), GClass2637.General, new GClass2558<GStruct94>(delegate (GStruct94 p)
+							await Singleton<GClass1560>
+								.Instance
+								.LoadBundlesAndCreatePools(GClass1560.PoolsCategory.Raid, GClass1560.AssemblyType.Local, allPrefabPaths.ToArray(), GClass2637.General, new GClass2558<GStruct94>(delegate (GStruct94 p)
 							{
 								//this.QuickLog($"Update::Loading a new Player {newPlayerToSpawn.Item1.AccountId}:{p.Stage}:{p.Progress}");
-
-								//base.SetMatchmakerStatus("Loading loot... " + p.Stage, p.Progress);
 							})).ContinueWith((Task t) => {
 								newPlayerToSpawn.Item3 = ESpawnState.Loaded;
 							});
-
-							//	Singleton<GClass1556>.Instance.LoadBundlesAndCreatePools(
-							//		GClass1556.PoolsCategory.Raid
-							//		, GClass1556.AssemblyType.Local
-							//		, allPrefabPaths.ToArray()
-							//		, GClass2633.General
-							//		, (GStruct94 o) => { }
-							//		, CancellationToken.None)
-							//		.ContinueWith(delegate
-							//	{
-							//		newPlayerToSpawn.Item3 = ESpawnState.Loaded;
-							//	});
-
-							//SIT.A.Tarkov.Core.Plugin.LoadBundlesAndCreatePoolsSync(allPrefabPaths.ToArray());
-							//SIT.A.Tarkov.Core.Plugin.LoadBundlesAndCreatePools(allPrefabPaths.ToArray()).ContinueWith(p =>
-							//{
-							//}, taskScheduler);
-							//newPlayerToSpawn.Item3 = ESpawnState.Loaded;
-
-							//var contin = new Continuation(taskScheduler);
-							//contin.LoadBundle(newPlayerToSpawn.Item1).ContinueWith((r) => {
-
-							//	var rP = r.Result;
-							//                         newPlayerToSpawn.Item3 = ESpawnState.Loaded;
-							//                     });
-
 						}
 						else
 						{
@@ -744,6 +701,7 @@ namespace SIT.Coop.Core.LocalGame
 									var prc = result.GetOrAddComponent<PlayerReplicatedComponent>();
 									prc.player = result;
 									PlayersToAddActivePlayerToAI.Add((result, DateTime.Now));
+									PlayersToSpawn.TryRemove(accountId, out _);
                                 }
 								else
 								{
