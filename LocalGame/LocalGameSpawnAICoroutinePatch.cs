@@ -196,6 +196,9 @@ namespace SIT.Coop.Core.LocalGame
             }
         }
 
+
+        private static MethodInfo method_8 = null;
+
         /// <summary>
         /// 
         /// </summary>
@@ -224,8 +227,11 @@ namespace SIT.Coop.Core.LocalGame
                 return null;
             }
 
-            // TODO: Rewrite the following method into into BotCreationMethod
-            var player = await (Task<LocalPlayer>)PatchConstants.GetMethodForType(LocalGamePatches.LocalGameInstance.GetType().BaseType, "method_8")
+            // TODO: Rewrite the following method into BotCreationMethod
+            if (method_8 == null)
+                method_8 = PatchConstants.GetMethodForType(LocalGamePatches.LocalGameInstance.GetType().BaseType, "method_8");
+
+            var player = await (Task<LocalPlayer>)method_8
             .Invoke(LocalGamePatches.LocalGameInstance, new object[] { profile, position });
 
             var prc = player.GetOrAddComponent<PlayerReplicatedComponent>();
@@ -272,7 +278,7 @@ namespace SIT.Coop.Core.LocalGame
                         }
                     };
             //new Request().PostJson("/client/match/group/server/players/spawn", dictionary2.ToJson());
-            ServerCommunication.PostLocalPlayerData(player, dictionary2);
+            await ServerCommunication.PostLocalPlayerDataAsync(player, dictionary2);
             //Logger.LogInfo($"BotCreationMethod. [SUCCESS] Adding AI {profile.AccountId} to CoopGameComponent.Players list");
             return player;
         }
