@@ -53,5 +53,10 @@ namespace SIT.Coop.Core.Player
             //Logger.LogInfo("PlayerOnSayPatch.PatchPostfix:Sent");
 
         }
+
+        public static void SayReplicated(EFT.Player player, Dictionary<string, object> packet)
+        {
+
+        }
     }
 }

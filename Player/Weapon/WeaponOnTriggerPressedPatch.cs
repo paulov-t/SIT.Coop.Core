@@ -28,11 +28,17 @@ namespace SIT.Coop.Core.Player.Weapon
             return method;
         }
 
-        //[PatchPrefix]
-        //public static void PatchPrefix(object gesture)
-        //{
-        //    Logger.LogInfo("OnGesturePatch.PatchPrefix");
-        //}
+        [PatchPrefix]
+        public static bool PatchPrefix(
+            EFT.Player.ItemHandsController __instance,
+            bool pressed
+            )
+        {
+            return Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer;
+        }
+
+        private static Dictionary<string, DateTime> lastTriggerPressedPacketSent = new Dictionary<string, DateTime>();
+
 
         [PatchPostfix]
         public static void PatchPostfix(
@@ -40,12 +46,47 @@ namespace SIT.Coop.Core.Player.Weapon
             bool pressed
             )
         {
-            Dictionary<string, object> dictionary = new Dictionary<string, object>();
-            dictionary.Add("pressed", pressed);
-            dictionary.Add("m", "SetTriggerPressed");
+            if (Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer)
+                return;
 
-            var player = PatchConstants.GetAllFieldsForObject(__instance).First(x => x.Name == "_player").GetValue(__instance);
-            ServerCommunication.PostLocalPlayerData(player, dictionary);
+            var player = PatchConstants.GetAllFieldsForObject(__instance).First(x => x.Name == "_player").GetValue(__instance) as EFT.Player;
+            if (!lastTriggerPressedPacketSent.ContainsKey(player.Profile.AccountId) || lastTriggerPressedPacketSent[player.Profile.AccountId] < DateTime.Now.AddSeconds(-1))
+            {
+                Dictionary<string, object> dictionary = new Dictionary<string, object>();
+                dictionary.Add("pressed", pressed);
+                dictionary.Add("m", "SetTriggerPressed");
+
+                ServerCommunication.PostLocalPlayerData(player, dictionary);
+
+                if (!lastTriggerPressedPacketSent.ContainsKey(player.Profile.AccountId))
+                    lastTriggerPressedPacketSent.Add(player.Profile.AccountId, DateTime.Now);
+                else
+                    lastTriggerPressedPacketSent[player.Profile.AccountId] = DateTime.Now;
+
+            }
+        }
+
+        public static EFT.Player.FirearmController GetFirearmController(EFT.Player player)
+        {
+            if (player.HandsController is EFT.Player.FirearmController)
+            {
+                return player.HandsController as EFT.Player.FirearmController;
+            }
+            return null;
+        }
+
+
+        public static void WeaponOnTriggerPressedReplicated(EFT.Player player, Dictionary<string, object> packet)
+        {
+            var firearmController = GetFirearmController(player);
+            //if(player.HandsController is )
+            if(firearmController != null)
+            {
+                if(firearmController.CanPressTrigger())
+                {
+                    firearmController.SetTriggerPressed(bool.Parse(packet["pressed"].ToString()));
+                }
+            }
         }
     }
 }

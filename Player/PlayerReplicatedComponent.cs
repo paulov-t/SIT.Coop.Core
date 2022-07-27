@@ -1,4 +1,5 @@
 ﻿using EFT.Interactive;
+using SIT.Coop.Core.Player.Weapon;
 using SIT.Coop.Core.Web;
 using SIT.Tarkov.Core;
 using System;
@@ -25,6 +26,8 @@ namespace SIT.Coop.Core.Player
         internal List<Vector2> ClientListRotationsToSend { get; } = new List<Vector2>();
         internal ConcurrentQueue<Vector2> ReceivedRotationPackets { get; } = new ConcurrentQueue<Vector2>();
         public float LastTiltLevel { get; private set; }
+        public Vector2 LastRotation { get; private set; } = Vector2.zero;
+        public Vector2 LastMovementDirection { get; private set; } = Vector2.zero;
 
         void Awake()
         {
@@ -115,9 +118,11 @@ namespace SIT.Coop.Core.Player
                         //    //LastRotationPacket = packet;
                         //    break;
                         case "Say":
+                            PlayerOnSayPatch.SayReplicated(player, packet);
                             break;
                         case "SetTriggerPressed":
                             //PatchConstants.Logger.LogInfo("SetTriggerPressed");
+                            WeaponOnTriggerPressedPatch.WeaponOnTriggerPressedReplicated(player, packet);
                             break;
                         case "SetItemsInHands":
                             PatchConstants.Logger.LogInfo("SetItemsInHands");
@@ -160,14 +165,48 @@ namespace SIT.Coop.Core.Player
                 return;
 
 
-            if (player.MovementContext != null && this.LastTiltLevel != player.MovementContext.Tilt)
+            if (player.MovementContext != null)
             {
-                this.LastTiltLevel = player.MovementContext.Tilt;
-                Dictionary<string, object> dictionary = new Dictionary<string, object>();
-                dictionary.Add("tilt", LastTiltLevel);
-                dictionary.Add("m", "Tilt");
-                ServerCommunication.PostLocalPlayerData(player, dictionary);
+                if (this.LastTiltLevel != player.MovementContext.Tilt)
+                {
+                    this.LastTiltLevel = player.MovementContext.Tilt;
+                    Dictionary<string, object> dictionary = new Dictionary<string, object>();
+                    dictionary.Add("tilt", LastTiltLevel);
+                    dictionary.Add("m", "Tilt");
+                    ServerCommunication.PostLocalPlayerData(player, dictionary);
+                }
+
+
+                //var rotationDist = Vector2.Distance(player.Rotation, LastRotation);
+                //var rotationDot = Vector2.Dot(player.Rotation, LastRotation);
+                //var rotationAngle = Vector2.Angle(player.Rotation, LastRotation);
+
+                //if (player.IsAI && player.Rotation != this.LastRotation && rotationAngle > 0.5)
+                //{
+                //    this.LastRotation = player.Rotation;
+                //    Dictionary<string, object> dictionary = new Dictionary<string, object>();
+                //    dictionary.Add("rX", LastRotation.x);
+                //    dictionary.Add("rY", LastRotation.y);
+                //    dictionary.Add("m", "Rotation");
+                //    ServerCommunication.PostLocalPlayerData(player, dictionary);
+                //}
+
+                //var movementAngle = Vector2.Angle(player.MovementContext.MovementDirection, this.LastMovementDirection);
+
+                //if (this.LastMovementDirection == Vector2.zero 
+                //    || (player.MovementContext.MovementDirection != this.LastMovementDirection
+                //        && movementAngle >= 45)
+                //    )
+                //{
+                //    this.LastMovementDirection = player.MovementContext.MovementDirection;
+                //    Dictionary<string, object> dictionary = new Dictionary<string, object>();
+                //    dictionary.Add("dX", LastMovementDirection.x);
+                //    dictionary.Add("dY", LastMovementDirection.y);
+                //    dictionary.Add("m", "MoveDirection");
+                //    ServerCommunication.PostLocalPlayerData(player, dictionary);
+                //}
             }
+
 
             if (LastMovementPacket == null)
                 return;
