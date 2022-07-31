@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using SIT.Tarkov.Core.PlayerPatches.Health;
 using EFT.InventoryLogic;
+using System.Collections.Concurrent;
 
 namespace SIT.Coop.Core.Player
 {
@@ -82,10 +83,18 @@ namespace SIT.Coop.Core.Player
             //dictionary.Add("headSegment", headSegment);
 
             dictionary.Add("m", "Damage");
-            ServerCommunication.PostLocalPlayerData(__instance, dictionary);
+            var generatedDict = ServerCommunication.PostLocalPlayerData(__instance, dictionary);
+            if(generatedDict != null && generatedDict.ContainsKey("t"))
+            {
+                if (!ProcessedDamages.Contains(generatedDict["t"]))
+                    ProcessedDamages.Add(generatedDict["t"].ToString());
+            }
+
             //Logger.LogInfo("PlayerOnDamagePatch.PatchPostfix:Sent");
 
         }
+
+        private static ConcurrentBag<string> ProcessedDamages = new ConcurrentBag<string>();
 
         public static void DamageReplicated(EFT.Player player, Dictionary<string, object> dict)
         {
@@ -109,6 +118,16 @@ namespace SIT.Coop.Core.Player
             Enum.TryParse<EBodyPart>(dict["bodyPart"].ToString(), out EBodyPart bodyPart);
 
             bool autoKillThisCunt = (dict.ContainsKey("killThisCunt") ? bool.Parse(dict["killThisCunt"].ToString()) : false);
+
+
+
+            if (dict.ContainsKey("t"))
+            {
+                if (!ProcessedDamages.Contains(dict["t"]))
+                    ProcessedDamages.Add(dict["t"].ToString());
+                else
+                    return;
+            }
 
             //EDamageType damageType = damageInfo.DamageType;
             EDamageType damageType = PatchConstants.GetFieldOrPropertyFromInstance<EDamageType>(dmI, "DamageType");
@@ -179,7 +198,7 @@ namespace SIT.Coop.Core.Player
             var currentOVRHealth = HealthControllerHelpers.GetBodyPartHealth(ActiveHealthController, EBodyPart.Common).Current;
             if (currentOVRHealth == 0)
             {
-                //UnityEngine.Debug.LogError($"ClientApplyDamageInfo::Common Health, killing");
+                UnityEngine.Debug.LogError($"ClientApplyDamageInfo::Common Health, killing");
 
                 Kill(ActiveHealthController, damageType);
             }
@@ -195,7 +214,7 @@ namespace SIT.Coop.Core.Player
             if (activeHealthController == null)
                 return;
 
-            PatchConstants.GetMethodForType(activeHealthController.GetType(), "Kill").Invoke(activeHealthController, new object[] { damageType });
+            //PatchConstants.GetMethodForType(activeHealthController.GetType(), "Kill").Invoke(activeHealthController, new object[] { damageType });
         }
 
         private static void BeingHitAction(object damageInfo, EFT.Player player)
