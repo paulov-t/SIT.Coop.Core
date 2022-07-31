@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using EFT;
 
 namespace SIT.Coop.Core.Player
 {
@@ -34,6 +35,12 @@ namespace SIT.Coop.Core.Player
             dictionary.Add("item.tpl", item.TemplateId);
             dictionary.Add("m", "SetItemInHands");
             ServerCommunication.PostLocalPlayerData(__instance, dictionary);
+        }
+
+        internal static void SetItemInHandsReplicated(LocalPlayer player, Dictionary<string, object> packet)
+        {
+            PatchConstants.Logger.LogInfo("SetItemInHands");
+
         }
     }
 }

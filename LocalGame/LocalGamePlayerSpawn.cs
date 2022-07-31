@@ -13,20 +13,14 @@ using System.Threading.Tasks;
 using UnityEngine;
 using static SIT.Coop.Core.LocalGame.LocalGamePatches;
 using SIT.Coop.Core.Player;
+using System.Threading;
 
 namespace SIT.Coop.Core.LocalGame
 {
     internal class LocalGamePlayerSpawn : ModulePatch
     {
-        private static GameWorld gameWorld = null;
-        private static CoopGameComponent coopGameComponent = null;
-
         protected override MethodBase GetTargetMethod()
         {
-            //foreach(var ty in SIT.Tarkov.Core.PatchConstants.EftTypes.Where(x => x.Name.StartsWith("BaseLocalGame")))
-            //{
-            //    Logger.LogInfo($"LocalGameStartingPatch:{ty}");
-            //}
             var t = SIT.Tarkov.Core.PatchConstants.EftTypes.FirstOrDefault(x => x.FullName.StartsWith("EFT.LocalGame"));
             if (t == null)
                 Logger.LogInfo($"LocalGamePlayerSpawn:Type is NULL");
@@ -73,20 +67,24 @@ namespace SIT.Coop.Core.LocalGame
                     LocalGamePatches.MyPlayer = p;
                 }
 
-                if (coopGameComponent != null)
-                    UnityEngine.Object.Destroy(coopGameComponent);
-
                 if (Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer)
                     return;
 
                 //gameWorld = Singleton<GameWorld>.Instance;
                 //coopGameComponent = gameWorld.GetOrAddComponent<CoopGameComponent>();
+                if(Singleton<GameWorld>.Instance.TryGetComponent<CoopGameComponent>(out var coopGameComponent)) {
+
+                    Logger.LogInfo("LocalGamePlayerSpawn CoopGameComponent Found!");
+
+                }
+
                 // Player spawns before Bots. This must occur here to clear out previous session.
                 CoopGameComponent.Players.Clear();
                 // TODO: Shouldnt this be a member variable, not static?
                 CoopGameComponent.Players.TryAdd(PatchConstants.GetPlayerProfileAccountId(profile), p);
                 var prc = p.GetOrAddComponent<PlayerReplicatedComponent>();
                 prc.player = p;
+                prc.IsMyPlayer = true;
 
 
                 Dictionary<string, object> dictionary2 = new Dictionary<string, object>
@@ -108,12 +106,16 @@ namespace SIT.Coop.Core.LocalGame
                             Matchmaker.MatchmakerAcceptPatches.GetGroupId()
                         },
                         {
-                            "nP",
-                            position
+                            "sPx",
+                            position.x
                         },
                         {
-                            "sP",
-                            position
+                            "sPy",
+                            position.y
+                        },
+                        {
+                            "sPz",
+                            position.z
                         },
                         { "m", "PlayerSpawn" },
                         {
@@ -135,18 +137,31 @@ namespace SIT.Coop.Core.LocalGame
                 if (Matchmaker.MatchmakerAcceptPatches.IsServer)
                 {
                     Dictionary<string, object> value2 = new Dictionary<string, object>
+                    {
                         {
-                            {
-                                "playersSpawnPoint",
-                                position
-                            },
-                            {
-                                "groupId",
-                                p.Profile.AccountId
-                            }
-                        };
+                            "m",
+                            "SpawnPointForCoop"
+                        },
+                        {
+                            "playersSpawnPointx",
+                            position.x
+                        },
+                        {
+                            "playersSpawnPointy",
+                            position.y
+                        },
+                        {
+                            "playersSpawnPointz",
+                            position.z
+                        },
+                        {
+                            "groupId",
+                            p.Profile.AccountId
+                        }
+                    };
+                    Logger.LogInfo("Setting Spawn Point to " + position);
                     new Request().PostJson("/client/match/group/server/setPlayersSpawnPoint", JsonConvert.SerializeObject(value2));
-                    ServerCommunication.SendDataDownWebSocket(dictionary2);
+                    ServerCommunication.SendDataDownWebSocket(value2);
 
                 }
                 else if (Matchmaker.MatchmakerAcceptPatches.IsClient)
@@ -171,12 +186,19 @@ namespace SIT.Coop.Core.LocalGame
                                 System.Random r = new System.Random();
                                 var randX = r.NextFloat(-1, 1);
                                 var randZ = r.NextFloat(-1, 1);
-                                Vector3 vector = JsonConvert.DeserializeObject<Vector3>(value4);
+
+                                var spawnPointDict = JsonConvert.DeserializeObject<Dictionary<string, object>>(value4);
+                                var spawnPointX = float.Parse(spawnPointDict["x"].ToString());
+                                var spawnPointY = float.Parse(spawnPointDict["y"].ToString());
+                                var spawnPointZ = float.Parse(spawnPointDict["z"].ToString());
+                                Vector3 vector = new Vector3(spawnPointX, spawnPointY, spawnPointZ);
                                 spawnPointPosition = vector;
                                 PatchConstants.Logger.LogInfo($"Setup Client to use same Spawn at {spawnPointPosition.x}:{spawnPointPosition.y}:{spawnPointPosition.z} as Host");
                                 spawnPointPosition = spawnPointPosition + new Vector3(randX, 0, randZ);
-                                //LocalGame.SetMatchmakerStatus("Spawn Location from Server received");
-                                //await Task.Delay(1000);
+                            }
+                            else
+                            {
+                                PatchConstants.Logger.LogInfo("Getting Client Spawn Point Failed::ERROR::No Value Given");
                             }
                         }
                         catch (Exception ex)
@@ -184,6 +206,7 @@ namespace SIT.Coop.Core.LocalGame
                             PatchConstants.Logger.LogInfo("Getting Client Spawn Point Failed::ERROR::" + ex.ToString());
                         }
                         //await Task.Delay(1000);
+                        Thread.Sleep(500);
                     }
                     if(spawnPointPosition != Vector3.zero)
                     {

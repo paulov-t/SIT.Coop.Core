@@ -55,12 +55,6 @@ namespace SIT.Coop.Core.LocalGame
 	}
 	public class CoopGameComponent : MonoBehaviour
 	{
-		List<string> MethodsToReplicateToMyPlayer = new List<string>()
-			{
-				"Dead",
-				"Damage",
-			};
-
 		BepInEx.Logging.ManualLogSource Logger;
 
 		void Awake()
@@ -83,8 +77,44 @@ namespace SIT.Coop.Core.LocalGame
 
         private void ServerCommunication_OnDataArrayReceived(string[] array)
         {
+			try
+			{
+				foreach (var item in array)
+				{
+					if (item.Length == 4)
+					{
+						return;
+					}
+					else
+					{
+						Task.Run(() =>
+						{
+							//Logger.LogInfo("received array: item: " + item);
+							var parsedItem = Json.Deserialize<Dictionary<string, object>>(item);
+							if (parsedItem != null)
+							{
+								QueuedPackets.Enqueue(parsedItem);
+							}
+						});
+					}
 
-        }
+					//var parsedItem = Json.Deserialize<Dictionary<string, object>>(item);
+					//if (parsedItem != null)
+					//            {
+					//	QueuedPackets.Enqueue(parsedItem);
+
+					//	//if (parsedItem.ContainsKey("m") && parsedItem["m"].ToString() == "PlayerSpawn")
+					// //               {
+
+					//	//}
+					//}
+				}
+			}
+			catch (Exception)
+            {
+
+            }
+		}
 
         private void ServerCommunication_OnDataStringReceived(string @string)
         {
@@ -134,6 +164,8 @@ namespace SIT.Coop.Core.LocalGame
 			}
 		}
 
+		private static DateTime LastPeopleParityCheck = DateTime.Now;
+
 
 		public static EFT.LocalPlayer GetPlayerByAccountId(string accountId)
 		{
@@ -145,30 +177,25 @@ namespace SIT.Coop.Core.LocalGame
 				if (Players != null && Players.ContainsKey(accountId))
 					return Players[accountId];
 
-				//var allPlayers = FindObjectsOfType<EFT.LocalPlayer>();
-				//if (allPlayers != null)
-				//{
-				//	var player = allPlayers.FirstOrDefault(x => x.Profile.AccountId == accountId);
-				//	if (player == null)
-				//	{
-				//		//PatchConstants.Logger.LogInfo($"Unable to find Profile of {accountId}");
-				//		return null;
-				//	}
-
-				//	PatchConstants.Logger.LogInfo($"Adding Profile of {accountId} to Players list");
-				//	Players.TryAdd(accountId, player);
-				//	return player;
-				//}
 			}
 			catch (Exception)
             {
             }
 
-			PatchConstants.Logger.LogInfo($"Failed to find Profile of {accountId} in Players list");
 
+			//PatchConstants.Logger.LogInfo($"Failed to find Profile of {accountId} in Players list");
+			// -----------------------------------------------------------
+			// Unable to find profile. Ask Server to resend the data
+			//if (LastPeopleParityCheck < DateTime.Now.AddSeconds(-30))
+			//{
+			//	_ = ServerCommunication.SendDataDownWebSocket("PeopleParity");
+			//	LastPeopleParityCheck = DateTime.Now;
+			//}
 			return null;
 
 		}
+
+		public static Vector3? ClientSpawnLocation;
 
 		private readonly ConcurrentDictionary<string, (Profile, Vector3, ESpawnState)> PlayersToSpawn = new ConcurrentDictionary<string, (Profile, Vector3, ESpawnState)>();
 
@@ -181,7 +208,7 @@ namespace SIT.Coop.Core.LocalGame
 
 		private void DataReceivedClient_PlayerBotSpawn(Dictionary<string, object> parsedDict, string accountId, string profileId, Vector3 newPosition, bool isBot)
 		{
-			Logger.LogInfo("DataReceivedClient_PlayerBotSpawn");
+			//Logger.LogInfo("DataReceivedClient_PlayerBotSpawn");
 
 			if (LocalGamePatches.MyPlayerProfile == null)
 			{
@@ -313,9 +340,9 @@ namespace SIT.Coop.Core.LocalGame
 						, ""
 						, EPointOfView.ThirdPerson
 						, profile
-						//, false
-						, true
-						, EUpdateQueue.Update
+                        , false
+                        //, true
+                        , EUpdateQueue.Update
 						, armsUpdateMode
 						, bodyUpdateMode
 						, PatchConstants.CharacterControllerSettings.ClientPlayerMode
@@ -327,7 +354,7 @@ namespace SIT.Coop.Core.LocalGame
 						, null
 						, false
 					);
-
+				localPlayer.Transform.position = position;
 				//var createMethod = typeof(LocalPlayer).GetMethod("Create", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
 				//var localPlayer = (Task<LocalPlayer>)createMethod.Invoke(
 				//	null,
@@ -395,7 +422,6 @@ namespace SIT.Coop.Core.LocalGame
 		}
 
 
-		public static ConcurrentDictionary<string, EFT.LocalPlayer> OldPlayers { get; } = new ConcurrentDictionary<string, EFT.LocalPlayer>();
 		public static ConcurrentDictionary<string, EFT.LocalPlayer> Players { get; } = new ConcurrentDictionary<string, EFT.LocalPlayer>();
 
 		public static ConcurrentQueue<Dictionary<string, object>> QueuedPackets { get; } = new ConcurrentQueue<Dictionary<string, object>>();
@@ -411,15 +437,15 @@ namespace SIT.Coop.Core.LocalGame
 						if(queuedPacket.ContainsKey("m"))
                         {
 							var method = queuedPacket["m"];
-                            PatchConstants.Logger.LogInfo("CoopGameComponent.RunQueuedActions:method:" + method);
+                            //PatchConstants.Logger.LogInfo("CoopGameComponent.RunQueuedActions:method:" + method);
                             switch (method)
                             {
 								case "PlayerSpawn":
 									string accountId = queuedPacket["accountId"].ToString();
-									if (Players != null && Players.Count > 0 && !OldPlayers.ContainsKey(accountId))
-									{
+                                    if (Players != null && !Players.ContainsKey(accountId))
+                                    {
 
-										Vector3 newPosition = Players.First().Value.Position;
+                                        Vector3 newPosition = Players.First().Value.Position;
 										if (queuedPacket.ContainsKey("sPx") 
 											&& queuedPacket.ContainsKey("sPy") 
 											&& queuedPacket.ContainsKey("sPz"))
@@ -429,215 +455,23 @@ namespace SIT.Coop.Core.LocalGame
 											string npyString = queuedPacket["sPy"].ToString();
 											newPosition.y = float.Parse(npyString);
 											string npzString = queuedPacket["sPz"].ToString();
-											newPosition.z = float.Parse(npzString);
+											newPosition.z = float.Parse(npzString) + 0.5f;
 
 											//QuickLog("New Position found for Spawning Player");
 										}
 										this.DataReceivedClient_PlayerBotSpawn(queuedPacket, accountId, queuedPacket["profileId"].ToString(), newPosition, false);
-									}
-									else
-                                    {
-										Logger.LogInfo("Unable to Spawn player, players list is empty, or player already exists");
                                     }
-									break;
+                                    else
+                                    {
+                                        Logger.LogInfo($"Ignoring call to Spawn player {accountId}. The player already exists in the game.");
+                                    }
+                                    break;
 							}
 						}
                     }
                 }
             }
 		}
-
-		//DateTime? LastParityCheck = DateTime.Now;
-
-		//async void UpdateParityCheck()
-		//{
-		//	if (MatchmakerAcceptPatches.IsSinglePlayer)
-		//		return;
-
-		//	await Task.Run(() => {
-		//		try
-		//		{
-		//			//if (Status != GameStatus.Stopped && this.LastParityCheck < DateTime.Now.AddSeconds(-5.0))
-		//			if (this.LastParityCheck < DateTime.Now.AddSeconds(-5.0))
-		//			{
-		//				this.LastParityCheck = DateTime.Now;
-		//				Dictionary<string, object> dictionary = new Dictionary<string, object>();
-		//				dictionary.Add("m", "clientRequestForParity");
-		//				//QuickLog("RunParityCheck:" + MatchmakerAcceptPatches.GetGroupId());
-		//				dictionary.Add("groupId", MatchmakerAcceptPatches.GetGroupId());
-		//				//dictionary.Add("count", (this.BotDictionary.Count + this.Players.Count).ToString());
-		//				dictionary.Add("count", Players.Count);
-		//				//if (MatchmakerAcceptPatches.IsClient)
-		//				//{
-		//				//	dictionary.Add("botKeys", JsonConvert.SerializeObject(this.BotDictionary.Keys));
-		//				//	dictionary.Add("playerKeys", JsonConvert.SerializeObject(this.Players.Keys));
-		//				//}
-		//				if (MatchmakerAcceptPatches.IsServer)
-		//				{
-		//					//dictionary.Add("gameTime", this.dateTime_0.ToString());
-		//					//List<Dictionary<string, object>> list = new List<Dictionary<string, object>>();
-		//					//dictionary.Add("botData", list);
-		//					//foreach (KeyValuePair<string, Player> item in this.BotDictionary)
-		//					//{
-		//					//	Dictionary<string, object> dictionary2 = new Dictionary<string, object>();
-		//					//	dictionary2.Add("accountId", item.Key);
-		//					//	dictionary2.Add("profileId", item.Key);
-		//					//	dictionary2.Add("sPx", item.Value.Position.x);
-		//					//	dictionary2.Add("sPy", item.Value.Position.y);
-		//					//	dictionary2.Add("sPz", item.Value.Position.z);
-		//					//	dictionary2.Add("p.info", item.Value.Profile.Info);
-		//					//	dictionary2.Add("p.cust", item.Value.Profile.Customization);
-		//					//	dictionary2.Add("p.equip", item.Value.Profile.Inventory.Equipment);
-		//					//	list.Add(dictionary2);
-		//					//}
-		//					//dictionary["botData"] = list;
-		//					List<Dictionary<string, object>> list2 = new List<Dictionary<string, object>>();
-		//					dictionary.Add("playerData", list2);
-		//					foreach (KeyValuePair<string, EFT.LocalPlayer> player in Players)
-		//					{
-
-		//						Dictionary<string, object> playerData = new Dictionary<string, object>();
-		//						playerData.Add("accountId", player.Key);
-		//						playerData.Add("profileId", player.Key);
-		//						var p = GetPlayerByAccountId(player.Key);
-		//						if (p != null)
-		//						{
-		//							var pp = PatchConstants.GetPlayerProfile(p);
-		//							//if(pp != null)
-		//							//                              {
-		//							//	var ppInfo = PatchConstants.GetFieldOrPropertyFromInstance<object>(pp, "Info");
-		//							//	if (ppInfo != null)
-		//							//                                  {
-		//							//		playerData.Add("p.info", ppInfo);
-		//							//	}
-
-		//							//	var ppCust = PatchConstants.GetFieldOrPropertyFromInstance<object>(pp, "Customization");
-		//							//	if (ppCust != null)
-		//							//	{
-		//							//		playerData.Add("p.cust", ppCust);
-		//							//	}
-		//							//}
-		//						}
-		//						playerData.Add("sPx", player.Value.Position.x);
-		//						playerData.Add("sPy", player.Value.Position.y);
-		//						playerData.Add("sPz", player.Value.Position.z);
-		//						playerData.Add("p.info", player.Value.Profile.Info);
-		//						playerData.Add("p.cust", player.Value.Profile.Customization);
-		//						playerData.Add("p.equip", player.Value.Profile.Inventory.Equipment);
-		//						list2.Add(playerData);
-		//					}
-		//					dictionary["playerData"] = list2;
-		//				}
-
-		//				//MatchMakerAcceptScreen.ServerCommunicationCoopImplementation.SendDataDownWebSocket(dictionary);
-
-		//				//string text = new Request().PostJson("/client/match/group/server/parity", dictionary.SITToJson());
-		//				//if (!string.IsNullOrEmpty(text))
-		//				//{
-		//				//	//QuickLog(text);
-		//				//	ParityCheckHandleReturn(text);
-		//				//}
-
-		//				//string text2 = new Request().PostJson("/client/match/group/server/parity/players", dictionary.ToJson());
-		//				//ParityCheckHandleReturn(text2);
-
-		//				//string text3 = new Request().PostJson("/client/match/group/server/parity/bots", dictionary.ToJson());
-		//				//ParityCheckHandleReturn(text3);
-
-		//				//string text4 = new Request().PostJson("/client/match/group/server/parity/dead/get",
-		//				//	data: MatchmakerAcceptPatches.GetGroupId().ToJson());
-		//				//if (text != "ERROR")
-		//				//{
-		//				//	QuickLog(text4);
-		//				//}
-		//			}
-
-		//		}
-		//		catch (Exception)
-		//		{
-		//			//QuickLog("ParityCheck::ERROR::" + ex.ToString());
-		//		}
-		//	});
-		//}
-
-		//private void ParityCheckHandleReturn(string text)
-		//{
-		//	try
-		//	{
-		//		if (!string.IsNullOrEmpty(text) && !text.StartsWith("OK") && !text.Contains("ERROR"))
-		//		{
-		//			//var dictionary = text.ParseJsonTo<Dictionary<string, object>>(Array.Empty<JsonConverter>());
-		//			var dictionary = text.SITParseJson<Dictionary<string, object>>();
-		//			if (dictionary == null)
-		//				return;
-
-		//			if (dictionary.Count > 0)
-		//			{
-		//				//this.QuickLog("ParityCheck::Data Received from Central Server::" + text.Length);
-		//				if (dictionary.ContainsKey("players"))
-		//				{
-		//					List<Dictionary<string, object>> returnedPlayers = dictionary["players"].ToJson().ParseJsonTo<List<Dictionary<string, object>>>(Array.Empty<JsonConverter>());
-		//					if (returnedPlayers != null)
-		//					{
-		//						//this.QuickLog("ParityCheck::Data Received from Central Server::PlayerListData::Count::" + list3.Count);
-		//						//foreach (var item in list3)
-		//						//{
-		//						//	QuickLog(string.Join(", ", item.Keys));
-		//						//}
-		//						foreach (var item in returnedPlayers)
-		//						{
-		//							if (item == null)
-		//								continue;
-
-		//							if (item.ContainsKey("accountId"))
-		//							{
-		//								string accountId = item["accountId"].ToString();
-		//								if (Players == null || Players.Count == 0)
-		//									continue;
-
-		//								if (OldPlayers.ContainsKey(accountId))
-		//									continue;
-
-		//								Vector3 newPosition = Players.First().Value.Position;
-		//								if (item.ContainsKey("sPx") && item.ContainsKey("sPy") && item.ContainsKey("sPz"))
-		//								{
-		//									string npxString = item["sPx"].ToString();
-		//									newPosition.x = float.Parse(npxString);
-		//									string npyString = item["sPy"].ToString();
-		//									newPosition.y = float.Parse(npyString);
-		//									string npzString = item["sPz"].ToString();
-		//									newPosition.z = float.Parse(npzString);
-
-		//									//QuickLog("New Position found for Spawning Player");
-		//								}
-		//								this.DataReceivedClient_PlayerBotSpawn(item, accountId, item["profileId"].ToString(), newPosition, false);
-		//							}
-		//							else
-		//							{
-		//								this.QuickLog("couldn't process parity data, no accountId");
-		//							}
-		//						}
-		//					}
-		//					else
-		//					{
-		//						this.QuickLog("ParityCheck::Data Received from Central Server::Unable to convert playersListData");
-		//					}
-		//				}
-
-		//				if (dictionary.ContainsKey("dead"))
-		//				{
-		//					List<Dictionary<string, object>> deads = dictionary["dead"].ToJson().ParseJsonTo<List<Dictionary<string, object>>>(Array.Empty<JsonConverter>());
-		//					QuickLog($"Received: {deads.Count} dead people");
-		//				}
-		//			}
-		//		}
-		//	}
-		//	catch (Exception ex)
-		//	{
-		//		QuickLog("ParityCheckHandleReturn ERROR");
-		//		QuickLog(ex.ToString());
-		//	}
-		//}
 
 		private async void UpdateClientSpawnPlayers()
 		{
@@ -660,7 +494,7 @@ namespace SIT.Coop.Core.LocalGame
 				{
 					case ESpawnState.NotLoaded:
 						newPlayerToSpawn.Item3 = ESpawnState.Loading;
-						this.QuickLog("Update::Loading a new Player " + newPlayerToSpawn.Item1.AccountId);
+						//this.QuickLog("Update::Loading a new Player " + newPlayerToSpawn.Item1.AccountId);
 						IEnumerable<ResourceKey> allPrefabPaths = newPlayerToSpawn.Item1.GetAllPrefabPaths();
 						if (allPrefabPaths.Count() > 0)
                         {
@@ -686,10 +520,10 @@ namespace SIT.Coop.Core.LocalGame
 
 						this.QuickLog("Update::Spawning a new >> Loaded << Player " + newPlayerToSpawn.Item1.AccountId);
 						newPlayerToSpawn.Item1.SetSpawnedInSession(true);
-						Vector3 vector = newPlayerToSpawn.Item2;
+						Vector3 spawnPosition = newPlayerToSpawn.Item2;
 						try
 						{
-							var result = await this.CreatePhysicalOtherPlayerOrBot(newPlayerToSpawn.Item1, vector);
+							var result = await this.CreatePhysicalOtherPlayerOrBot(newPlayerToSpawn.Item1, spawnPosition);
 							if (result != null)
 							{
 								newPlayerToSpawn.Item3 = ESpawnState.Spawned;

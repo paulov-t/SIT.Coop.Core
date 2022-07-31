@@ -28,14 +28,14 @@ namespace SIT.Coop.Core.Player.Weapon
             return method;
         }
 
-        [PatchPrefix]
-        public static bool PatchPrefix(
-            EFT.Player.ItemHandsController __instance,
-            bool pressed
-            )
-        {
-            return Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer;
-        }
+        //[PatchPrefix]
+        //public static bool PatchPrefix(
+        //    EFT.Player.ItemHandsController __instance,
+        //    bool pressed
+        //    )
+        //{
+        //    return Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer;
+        //}
 
         private static Dictionary<string, DateTime> lastTriggerPressedPacketSent = new Dictionary<string, DateTime>();
 
@@ -50,7 +50,7 @@ namespace SIT.Coop.Core.Player.Weapon
                 return;
 
             var player = PatchConstants.GetAllFieldsForObject(__instance).First(x => x.Name == "_player").GetValue(__instance) as EFT.Player;
-            if (!lastTriggerPressedPacketSent.ContainsKey(player.Profile.AccountId) || lastTriggerPressedPacketSent[player.Profile.AccountId] < DateTime.Now.AddSeconds(-1))
+            if (!lastTriggerPressedPacketSent.ContainsKey(player.Profile.AccountId) || lastTriggerPressedPacketSent[player.Profile.AccountId] < DateTime.Now.AddSeconds(-0.2))
             {
                 Dictionary<string, object> dictionary = new Dictionary<string, object>();
                 dictionary.Add("pressed", pressed);
@@ -75,18 +75,26 @@ namespace SIT.Coop.Core.Player.Weapon
             return null;
         }
 
+        private static List<Dictionary<string, object>> ReceivedPackets = new List<Dictionary<string, object>>();
 
         public static void WeaponOnTriggerPressedReplicated(EFT.Player player, Dictionary<string, object> packet)
         {
-            var firearmController = GetFirearmController(player);
-            //if(player.HandsController is )
-            if(firearmController != null)
+            ReceivedPackets.Add(packet);
+            ReceivedPackets = ReceivedPackets.OrderBy(x => (float)x["t"]).ToList();
+            for (var i = 0; i < ReceivedPackets.Count; i++)  
             {
-                if(firearmController.CanPressTrigger())
+                Logger.LogInfo("Processing SetTriggerPressed");
+                var cPacket = ReceivedPackets[i];
+                if (cPacket["m"].ToString() != "SetTriggerPressed")
+                    continue;
+                var firearmController = GetFirearmController(player);
+                if (firearmController != null)
                 {
-                    firearmController.SetTriggerPressed(bool.Parse(packet["pressed"].ToString()));
+                    firearmController.SetTriggerPressed(bool.Parse(cPacket["pressed"].ToString()));
                 }
             }
+            ReceivedPackets.Clear();
+            
         }
     }
 }

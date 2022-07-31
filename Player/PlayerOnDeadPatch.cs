@@ -26,7 +26,6 @@ namespace SIT.Coop.Core.Player
         public static void PatchPostfix(EFT.Player __instance, EDamageType damageType)
         {
             CoopGameComponent.Players.TryRemove(__instance.Profile.AccountId, out _);
-            CoopGameComponent.OldPlayers.TryAdd(__instance.Profile.AccountId, (EFT.LocalPlayer)__instance);
         }
     }
 }

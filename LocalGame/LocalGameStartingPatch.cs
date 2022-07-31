@@ -16,6 +16,7 @@ using BepInEx.Configuration;
 using SIT.Coop.Core.Player;
 using Comfort.Common;
 using EFT;
+using UnityEngine;
 
 namespace SIT.Coop.Core.LocalGame
 {
@@ -98,6 +99,10 @@ namespace SIT.Coop.Core.LocalGame
             //Logger.LogInfo($"LocalGameStartingPatch:PatchPostfix");
             LocalGamePatches.LocalGameInstance = __instance;
             var gameWorld = Singleton<GameWorld>.Instance;
+            if (gameWorld.TryGetComponent<CoopGameComponent>(out CoopGameComponent coopGameComponent))
+            {
+                GameObject.Destroy(coopGameComponent);
+            }
             gameWorld.GetOrAddComponent<CoopGameComponent>();
 
             //Logger.LogInfo($"LocalGameStartingPatch:PatchPostfix:Connecting to Echo Server");

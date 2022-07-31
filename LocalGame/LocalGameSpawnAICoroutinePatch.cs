@@ -234,10 +234,12 @@ namespace SIT.Coop.Core.LocalGame
             var player = await (Task<LocalPlayer>)method_8
             .Invoke(LocalGamePatches.LocalGameInstance, new object[] { profile, position });
 
-            var prc = player.GetOrAddComponent<PlayerReplicatedComponent>();
-            prc.player = player;
-            CoopGameComponent.Players.TryAdd(profile.AccountId, player);
-            Dictionary<string, object> dictionary2 = new Dictionary<string, object>
+            if (Matchmaker.MatchmakerAcceptPatches.IsServer)
+            {
+                var prc = player.GetOrAddComponent<PlayerReplicatedComponent>();
+                prc.player = player;
+                CoopGameComponent.Players.TryAdd(profile.AccountId, player);
+                Dictionary<string, object> dictionary2 = new Dictionary<string, object>
                     {
                         {
                             "SERVER",
@@ -256,12 +258,16 @@ namespace SIT.Coop.Core.LocalGame
                             Matchmaker.MatchmakerAcceptPatches.GetGroupId()
                         },
                         {
-                            "nP",
-                            position
+                            "sPx",
+                            position.x
                         },
                         {
-                            "sP",
-                            position
+                            "sPy",
+                            position.y
+                        },
+                        {
+                            "sPz",
+                            position.z
                         },
                         { "m", "PlayerSpawn" },
                         {
@@ -277,9 +283,10 @@ namespace SIT.Coop.Core.LocalGame
                             player.Profile.Inventory.Equipment.CloneItem().ToJson()
                         }
                     };
-            //new Request().PostJson("/client/match/group/server/players/spawn", dictionary2.ToJson());
-            await ServerCommunication.PostLocalPlayerDataAsync(player, dictionary2);
-            //Logger.LogInfo($"BotCreationMethod. [SUCCESS] Adding AI {profile.AccountId} to CoopGameComponent.Players list");
+                //new Request().PostJson("/client/match/group/server/players/spawn", dictionary2.ToJson());
+                await ServerCommunication.PostLocalPlayerDataAsync(player, dictionary2);
+                //Logger.LogInfo($"BotCreationMethod. [SUCCESS] Adding AI {profile.AccountId} to CoopGameComponent.Players list");
+            }
             return player;
         }
     }

@@ -26,8 +26,9 @@ namespace SIT.Coop.Core.Player
         internal List<Vector2> ClientListRotationsToSend { get; } = new List<Vector2>();
         internal ConcurrentQueue<Vector2> ReceivedRotationPackets { get; } = new ConcurrentQueue<Vector2>();
         public float LastTiltLevel { get; private set; }
-        public Vector2 LastRotation { get; private set; } = Vector2.zero;
+        public Quaternion? LastRotation { get; private set; }
         public Vector2 LastMovementDirection { get; private set; } = Vector2.zero;
+        public bool IsMyPlayer { get; internal set; }
 
         void Awake()
         {
@@ -76,6 +77,8 @@ namespace SIT.Coop.Core.Player
                 if (QueuedPackets.TryDequeue(out Dictionary<string, object> packet))
                 {
                     var method = packet["m"].ToString();
+                    if (packet["accountId"].ToString() != player.Profile.AccountId)
+                        return;
 
                     // Any packets are ancient and lossless, then remove
                     if (packet.ContainsKey("t") && long.Parse(packet["t"].ToString()) < DateTime.Now.AddSeconds(-PacketTimeoutInSeconds).Ticks)
@@ -102,6 +105,25 @@ namespace SIT.Coop.Core.Player
                                 )
                                 LastMovementPacket = packet;
                             break;
+                        case "Position":
+                            Vector3 newPos = Vector3.zero;
+                            newPos.x = float.Parse(packet["x"].ToString());
+                            newPos.y = float.Parse(packet["y"].ToString());
+                            newPos.z = float.Parse(packet["z"].ToString());
+                            if (Vector3.Distance(newPos, player.Position) > 2f)
+                            {
+                                player.Transform.position = newPos;
+                            }
+                            break;
+                        case "Rotation":
+                            if(!IsMyPlayer)
+                            {
+                                Vector2 newRot = Vector2.zero;
+                                newRot.x = float.Parse(packet["rX"].ToString());
+                                newRot.y = float.Parse(packet["rY"].ToString());
+                                PatchConstants.SetFieldOrPropertyFromInstance<Vector2>(player, "Rotation", newRot);
+                            }
+                            break;
                         case "RotateBatch":
                             var rotationBatch = Json.Deserialize<List<Vector2>>(Json.Serialize(packet["batch"]));
                             foreach (var r in rotationBatch) 
@@ -124,14 +146,25 @@ namespace SIT.Coop.Core.Player
                             //PatchConstants.Logger.LogInfo("SetTriggerPressed");
                             WeaponOnTriggerPressedPatch.WeaponOnTriggerPressedReplicated(player, packet);
                             break;
-                        case "SetItemsInHands":
-                            PatchConstants.Logger.LogInfo("SetItemsInHands");
+                        case "SetItemInHands":
+                            PlayerOnSetItemInHandsPatch.SetItemInHandsReplicated(player, packet);
                             break;
                         case "InventoryOpened":
                             PlayerOnInventoryOpenedPatch.InventoryOpenedReplicated(player, packet);
                             break;
                         case "Tilt":
                             PlayerOnTiltPatch.TiltReplicated(player, packet);
+                            break;
+                        case "Proceed":
+                            switch(packet["pType"].ToString())
+                            {
+                                case "Weapon":
+                                    break;
+                                case "Meds":
+                                    break;
+                                case "Food":
+                                    break;
+                            }
                             break;
 
                     }
@@ -159,52 +192,63 @@ namespace SIT.Coop.Core.Player
             }
         }
 
+        public static bool ShouldReplicate(EFT.Player player, bool isMyPlayer)
+        {
+            return (Matchmaker.MatchmakerAcceptPatches.IsClient && isMyPlayer)
+               || (Matchmaker.MatchmakerAcceptPatches.IsServer && player.IsAI)
+               || (Matchmaker.MatchmakerAcceptPatches.IsServer && isMyPlayer);
+        }
+
+        private Vector3? LastSentPosition;
+
         private void UpdateMovement()
         {
             if (player == null)
                 return;
 
 
-            if (player.MovementContext != null)
+            if (ShouldReplicate(player, IsMyPlayer))
             {
-                if (this.LastTiltLevel != player.MovementContext.Tilt)
+                if (player.MovementContext != null)
                 {
-                    this.LastTiltLevel = player.MovementContext.Tilt;
-                    Dictionary<string, object> dictionary = new Dictionary<string, object>();
-                    dictionary.Add("tilt", LastTiltLevel);
-                    dictionary.Add("m", "Tilt");
-                    ServerCommunication.PostLocalPlayerData(player, dictionary);
+                    if (this.LastTiltLevel != player.MovementContext.Tilt)
+                    {
+                        this.LastTiltLevel = player.MovementContext.Tilt;
+                        Dictionary<string, object> dictionary = new Dictionary<string, object>();
+                        dictionary.Add("tilt", LastTiltLevel);
+                        dictionary.Add("m", "Tilt");
+                        ServerCommunication.PostLocalPlayerData(player, dictionary);
+                    }
+
+                    if (!LastRotation.HasValue)
+                        LastRotation = player.MovementContext.TransformRotation;
+                    //var rotationDist = Vector2.Distance(player.Rotation, LastRotation);
+                    //var rotationDot = Vector2.Dot(player.Rotation, LastRotation);
+                    var rotationAngle = Quaternion.Angle(player.MovementContext.TransformRotation, LastRotation.Value);
+
+                    if (player.MovementContext.TransformRotation != this.LastRotation && rotationAngle > 15)
+                    {
+                        this.LastRotation = player.MovementContext.TransformRotation;
+                        Dictionary<string, object> dictionary = new Dictionary<string, object>();
+                        dictionary.Add("rX", player.Rotation.x);
+                        dictionary.Add("rY", player.Rotation.y);
+                        dictionary.Add("m", "Rotation");
+                        ServerCommunication.PostLocalPlayerData(player, dictionary);
+                    }
+
+                    if(!LastSentPosition.HasValue || Vector3.Distance(LastSentPosition.Value, player.Position) > 2f)
+                    {
+                        this.LastRotation = player.MovementContext.TransformRotation;
+                        Dictionary<string, object> dictionary = new Dictionary<string, object>();
+                        dictionary.Add("x", player.Position.x);
+                        dictionary.Add("y", player.Position.y);
+                        dictionary.Add("z", player.Position.z);
+                        dictionary.Add("m", "Position");
+                        ServerCommunication.PostLocalPlayerData(player, dictionary);
+                        LastSentPosition = player.Position;
+                    }
+
                 }
-
-
-                //var rotationDist = Vector2.Distance(player.Rotation, LastRotation);
-                //var rotationDot = Vector2.Dot(player.Rotation, LastRotation);
-                //var rotationAngle = Vector2.Angle(player.Rotation, LastRotation);
-
-                //if (player.IsAI && player.Rotation != this.LastRotation && rotationAngle > 0.5)
-                //{
-                //    this.LastRotation = player.Rotation;
-                //    Dictionary<string, object> dictionary = new Dictionary<string, object>();
-                //    dictionary.Add("rX", LastRotation.x);
-                //    dictionary.Add("rY", LastRotation.y);
-                //    dictionary.Add("m", "Rotation");
-                //    ServerCommunication.PostLocalPlayerData(player, dictionary);
-                //}
-
-                //var movementAngle = Vector2.Angle(player.MovementContext.MovementDirection, this.LastMovementDirection);
-
-                //if (this.LastMovementDirection == Vector2.zero 
-                //    || (player.MovementContext.MovementDirection != this.LastMovementDirection
-                //        && movementAngle >= 45)
-                //    )
-                //{
-                //    this.LastMovementDirection = player.MovementContext.MovementDirection;
-                //    Dictionary<string, object> dictionary = new Dictionary<string, object>();
-                //    dictionary.Add("dX", LastMovementDirection.x);
-                //    dictionary.Add("dY", LastMovementDirection.y);
-                //    dictionary.Add("m", "MoveDirection");
-                //    ServerCommunication.PostLocalPlayerData(player, dictionary);
-                //}
             }
 
 

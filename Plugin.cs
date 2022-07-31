@@ -37,7 +37,6 @@ namespace SIT.Coop.Core
             new PlayerOnHealPatch().Enable();
             new PlayerOnInventoryOpenedPatch().Enable();
             new PlayerOnMovePatch().Enable();
-            new PlayerOnRotatePatch().Enable();
             new PlayerOnSayPatch().Enable();
             new PlayerOnSetItemInHandsPatch().Enable();
             // testing
