@@ -32,7 +32,7 @@ namespace SIT.Coop.Core.Player
         }
 
         [PatchPostfix]
-        public static void PatchPostfix(
+        public static void Patch(
             object __instance,
             object door
             , object interactionResult)
@@ -40,7 +40,7 @@ namespace SIT.Coop.Core.Player
             if (Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer)
                 return;
 
-            //Logger.LogInfo("OnInteractWithDoorPatch.PatchPostfix");
+            Logger.LogInfo("OnInteractWithDoorPatch.PatchPostfix");
             //Dictionary<string, object> dictionary = new Dictionary<string, object>();
             //dictionary.Add("doorId", 
             //    PatchConstants.GetFieldOrPropertyFromInstance<object>(door, "Id", false));
