@@ -100,49 +100,67 @@ namespace SIT.Coop.Core.Player
         {
             if(player == null)
             {
-                Logger.LogInfo("PlayerOnDamagePatch.DamageReplicated() - ERROR, no player instance");
+                Logger.LogError("PlayerOnDamagePatch.DamageReplicated() - ERROR, no player instance");
                 return;
             }
             object ActiveHealthController = player.ActiveHealthController;
             if (ActiveHealthController == null)
             {
-                Logger.LogInfo("PlayerOnDamagePatch.DamageReplicated() - ERROR, no ActiveHealthController instance");
+                Logger.LogError("PlayerOnDamagePatch.DamageReplicated() - ERROR, no ActiveHealthController instance");
                 return;
             }
 
+            Logger.LogInfo("PlayerOnDamagePatch.DamageReplicated() - Get IsAlive ");
+
             bool isAlive = PatchConstants.GetFieldOrPropertyFromInstance<bool>(ActiveHealthController, "IsAlive", false);
             //DamageInfo damageInfo = new DamageInfo();
+            Logger.LogInfo("PlayerOnDamagePatch.DamageReplicated() - Get DamageInfo ");
+
             var dmI = HealthControllerHelpers.CreateDamageInfoTypeFromDict(dict);
+
+            Logger.LogInfo("PlayerOnDamagePatch.DamageReplicated() - Get DamageInfo Damage ");
+
             var damage = PatchConstants.GetFieldOrPropertyFromInstance<float>(dmI, "Damage");
             //damageInfo.Damage = float.Parse(dict["damage"].ToString());
+
+            Logger.LogInfo("PlayerOnDamagePatch.DamageReplicated() - Get bodyPart ");
+
             Enum.TryParse<EBodyPart>(dict["bodyPart"].ToString(), out EBodyPart bodyPart);
 
             bool autoKillThisCunt = (dict.ContainsKey("killThisCunt") ? bool.Parse(dict["killThisCunt"].ToString()) : false);
 
 
+            Logger.LogInfo("PlayerOnDamagePatch.DamageReplicated() - Check processed damages ");
 
             if (dict.ContainsKey("t"))
             {
                 if (!ProcessedDamages.Contains(dict["t"]))
                     ProcessedDamages.Add(dict["t"].ToString());
                 else
+                {
+                    Logger.LogInfo("PlayerOnDamagePatch.DamageReplicated() - Ignoring already processed damage ");
                     return;
+                }
             }
 
             //EDamageType damageType = damageInfo.DamageType;
             EDamageType damageType = PatchConstants.GetFieldOrPropertyFromInstance<EDamageType>(dmI, "DamageType");
             if (Matchmaker.MatchmakerAcceptPatches.IsClient && (damageType == EDamageType.Undefined || damageType == EDamageType.Fall))
+            {
+                Logger.LogInfo("PlayerOnDamagePatch.DamageReplicated() - Ignoring undefined or fall damage ");
+
                 return;
+            }
 
             if (ActiveHealthController == null)
             {
-                Logger.LogInfo($"ClientApplyDamageInfo::Attempting to Apply Damage a person with no Health Controller");
+                Logger.LogInfo($"PlayerOnDamagePatch.DamageReplicated() - Attempting to Apply Damage a person with no Health Controller");
                 return;
             }
 
             if (!isAlive)
             {
-                Logger.LogInfo($"ClientApplyDamageInfo::Attempting to Apply Damage to a Dead Guy");
+                Logger.LogInfo($"PlayerOnDamagePatch.DamageReplicated() - Attempting to Apply Damage to a Dead Guy");
                 return;
             }
 
@@ -158,8 +176,8 @@ namespace SIT.Coop.Core.Player
 
             float currentBodyPartHealth = HealthControllerHelpers.GetBodyPartHealth(ActiveHealthController, bodyPart).Current;
 
-            //Logger.LogInfo($"ClientApplyDamageInfo::Damage = {damage}");
-            //Logger.LogInfo($"ClientApplyDamageInfo::{bodyPart} current health [before] = {currentBodyPartHealth}");
+            Logger.LogInfo($"ClientApplyDamageInfo::Damage = {damage}");
+            Logger.LogInfo($"ClientApplyDamageInfo::{bodyPart} current health [before] = {currentBodyPartHealth}");
 
             try
             {
@@ -185,15 +203,15 @@ namespace SIT.Coop.Core.Player
             //Logger.LogInfo($"ClientApplyDamageInfo::{bodyPart} current health [after] = {currentBodyPartHealth}");
             //UnityEngine.Debug.LogError($"ClientApplyDamageInfo::{bodyPartType} current health [after] = {currentBodyPartHealth}");
 
-            //if (currentBodyPartHealth == 0)
-            //{
-            //    if (!damageType.IsBleeding() && (bodyPartType == EBodyPart.Head || bodyPartType == EBodyPart.Chest))
-            //    {
-            //        UnityEngine.Debug.LogError($"ClientApplyDamageInfo::No BodyPart Health on Head/Chest, killing");
+            if (currentBodyPartHealth == 0)
+            {
+                if (!damageType.IsBleeding() && (bodyPart == EBodyPart.Head || bodyPart == EBodyPart.Chest))
+                {
+                    UnityEngine.Debug.LogError($"ClientApplyDamageInfo::No BodyPart Health on Head/Chest, killing");
 
-            //        ActiveHealthController.Kill(damageType);
-            //    }
-            //}
+                    //        ActiveHealthController.Kill(damageType);
+                }
+            }
 
             var currentOVRHealth = HealthControllerHelpers.GetBodyPartHealth(ActiveHealthController, EBodyPart.Common).Current;
             if (currentOVRHealth == 0)

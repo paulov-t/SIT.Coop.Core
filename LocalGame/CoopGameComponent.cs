@@ -264,7 +264,7 @@ namespace SIT.Coop.Core.LocalGame
 					if (parsedDict.ContainsKey("p.equip"))
 					{
 						var pEquip = parsedDict["p.equip"].ToString();
-						var equipment = parsedDict["p.equip"].ToString().ParseJsonTo<GClass2140>(Array.Empty<JsonConverter>());
+						var equipment = parsedDict["p.equip"].ToString().ParseJsonTo<PlayerEquipment>(Array.Empty<JsonConverter>());
 						profile.Inventory.Equipment = equipment;
 					}
 					if (parsedDict.ContainsKey("isHost"))
@@ -499,9 +499,9 @@ namespace SIT.Coop.Core.LocalGame
 						if (allPrefabPaths.Count() > 0)
                         {
 							Singleton<JobScheduler>.Instance.SetForceMode(enable: true);
-							await Singleton<GClass1560>
+							await Singleton<PoolManager>
 								.Instance
-								.LoadBundlesAndCreatePools(GClass1560.PoolsCategory.Raid, GClass1560.AssemblyType.Local, allPrefabPaths.ToArray(), GClass2637.General, new GClass2558<GStruct94>(delegate (GStruct94 p)
+								.LoadBundlesAndCreatePools(PoolManager.PoolsCategory.Raid, PoolManager.AssemblyType.Local, allPrefabPaths.ToArray(), GClass2637.General, new GClass2558<GStruct94>(delegate (GStruct94 p)
 							{
 								//this.QuickLog($"Update::Loading a new Player {newPlayerToSpawn.Item1.AccountId}:{p.Stage}:{p.Progress}");
 							})).ContinueWith((Task t) => {
@@ -567,7 +567,7 @@ namespace SIT.Coop.Core.LocalGame
 
 		private void SetWeaponInHandsOfNewPlayer(LocalPlayer person)
 		{
-			GClass2140 equipment = person.Profile.Inventory.Equipment;
+			PlayerEquipment equipment = person.Profile.Inventory.Equipment;
 			if (equipment == null)
 			{
 				return;
