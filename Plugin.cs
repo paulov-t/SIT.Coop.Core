@@ -41,11 +41,12 @@ namespace SIT.Coop.Core
             new PlayerOnSetItemInHandsPatch().Enable();
             // testing
             new PlayerOnInteractWithDoorPatch().Enable();
-
+            new PlayerOnProceedWeaponPatch().Enable();
 
             // ------ WEAPON -------------------------
             new WeaponOnTriggerPressedPatch().Enable();
             new WeaponOnDropPatch().Enable();
+
 
             
 

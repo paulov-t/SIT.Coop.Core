@@ -26,9 +26,10 @@ namespace SIT.Coop.Core.Player
         }
 
         [PatchPostfix]
-        public static void Patch(EFT.Player __instance)
+        public static void Patch(EFT.Player __instance, EFT.InventoryLogic.Weapon weapon)
         {
-            
+            Logger.LogInfo($"PlayerOnProceedWeaponPatch:Patch");
+
         }
     }
 }
