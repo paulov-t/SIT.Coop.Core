@@ -572,18 +572,22 @@ namespace SIT.Coop.Core.LocalGame
 			{
 				return;
 			}
-			Item item = equipment.GetSlot(EquipmentSlot.FirstPrimaryWeapon).ContainedItem ?? equipment.GetSlot(EquipmentSlot.SecondPrimaryWeapon).ContainedItem ?? equipment.GetSlot(EquipmentSlot.Holster).ContainedItem;
+			Item item = equipment.GetSlot(EquipmentSlot.FirstPrimaryWeapon).ContainedItem
+				?? equipment.GetSlot(EquipmentSlot.SecondPrimaryWeapon).ContainedItem
+				?? equipment.GetSlot(EquipmentSlot.Holster).ContainedItem
+				?? equipment.GetSlot(EquipmentSlot.Scabbard).ContainedItem;
 			if (item == null)
 			{
 				return;
 			}
-			person.SetItemInHands(item, delegate (Result<GInterface99> result)
-			{
-				if (result.Failed)
-				{
-					this.QuickLog(result.Error);
-				}
-			});
+			//person.SetItemInHands(item, null);
+
+			SetItemInHandsOfPlayer(person, item);
+		}
+
+		private void SetItemInHandsOfPlayer(LocalPlayer person, Item item)
+		{
+			person.SetItemInHands(item, null);
 		}
 
 
