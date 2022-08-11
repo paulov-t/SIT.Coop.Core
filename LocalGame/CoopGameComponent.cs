@@ -188,12 +188,18 @@ namespace SIT.Coop.Core.LocalGame
 			// Unable to find profile. Ask Server to resend the data
 			//if (LastPeopleParityCheck < DateTime.Now.AddSeconds(-30))
 			//{
-			//	_ = ServerCommunication.SendDataDownWebSocket("PeopleParity");
+			if (!PeopleParityRequestedAccounts.Contains(accountId))
+			{
+				PeopleParityRequestedAccounts.Add(accountId);
+				_ = ServerCommunication.SendDataDownWebSocket("PeopleParityRequest=" + accountId + "=" + LocalGamePatches.MyPlayerProfile.AccountId);
+			}
 			//	LastPeopleParityCheck = DateTime.Now;
 			//}
 			return null;
 
 		}
+
+		public static List<string> PeopleParityRequestedAccounts = new List<string>();
 
 		public static Vector3? ClientSpawnLocation;
 
@@ -341,75 +347,19 @@ namespace SIT.Coop.Core.LocalGame
 						, EPointOfView.ThirdPerson
 						, profile
                         , false
-                        //, true
                         , EUpdateQueue.Update
 						, armsUpdateMode
 						, bodyUpdateMode
 						, PatchConstants.CharacterControllerSettings.ClientPlayerMode
 						, () => 1f
 						, () => 1f
-						, (GInterface118)Activator.CreateInstance(PatchConstants.TypeDictionary["StatisticsSession"])
-						//, (GInterface74)PatchConstants.GetFieldFromType(PatchConstants.TypeDictionary["FilterCustomization"], "Default").GetValue(null)
-						,GClass1271.Default
+						, (GStatisticsSession2)Activator.CreateInstance(PatchConstants.TypeDictionary["StatisticsSession"])
+						, GFilterCustomization0.Default
 						, null
 						, false
 					);
 				localPlayer.Transform.position = position;
-				//var createMethod = typeof(LocalPlayer).GetMethod("Create", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-				//var localPlayer = (Task<LocalPlayer>)createMethod.Invoke(
-				//	null,
-				//	//onstants.InvokeAsyncMethod(typeof(LocalPlayer), typeof(LocalPlayer), "Create",
-				//	new object[] {
-				//		playerId
-				//		, position
-				//		, Quaternion.identity
-				//		, "Player"
-				//		, ""
-				//		, EPointOfView.ThirdPerson
-				//		, profile
-				//		, false
-				//		, EUpdateQueue.Update //PatchConstants.GetAllPropertiesForObject(LocalGameInstance).FirstOrDefault(x=>x.Name == "UpdateQueue").GetValue(LocalGameInstance)
-				//		, armsUpdateMode
-				//		, bodyUpdateMode
-				//		//, GClass523.Config.CharacterController.ClientPlayerMode // TODO: Make this dynamic/reflected
-				//		, PatchConstants.CharacterControllerSettings.ClientPlayerMode
-				//		, () => 1f
-				//		, () => 1f
-				//		, 0
-				//		//, new GClass1478()
-				//		, Activator.CreateInstance(PatchConstants.TypeDictionary["StatisticsSession"])
-				//		, PatchConstants.GetFieldFromType(PatchConstants.TypeDictionary["FilterCustomization"], "Default").GetValue(null)
-				//		, null
-				//		, false
-				//	}
-
-				//	);
-
-				//typeof(LocalPlayer).GetMethod("Create").inv
-
-				//var localPlayer = await LocalPlayer.Create(playerId
-				//	, position
-				//	, Quaternion.identity
-				//	, "Player"
-				//	, ""
-				//	, EPointOfView.ThirdPerson
-				//	, profile
-				//	, false
-				//	, EUpdateQueue.Update //PatchConstants.GetAllPropertiesForObject(LocalGameInstance).FirstOrDefault(x=>x.Name == "UpdateQueue").GetValue(LocalGameInstance)
-				//	, armsUpdateMode
-				//	, bodyUpdateMode
-				//                //, GClass523.Config.CharacterController.ClientPlayerMode // TODO: Make this dynamic/reflected
-				//                , PatchConstants.CharacterControllerSettings.ClientPlayerMode // TODO: Make this dynamic/reflected
-				//															//, CharacterControllerMode
-				//	, () => 1f
-				//	, () => 1f
-				//	, 0
-				//	//, new GClass1478()
-				//	, Activator.CreateInstance(PatchConstants.TypeDictionary["StatisticsSession"])
-				//	, GClass1206.Default
-				//	, null
-				//	, false);
-				//return localPlayer;
+				
 				return localPlayer;
 			}
 			catch (Exception ex)
@@ -501,7 +451,9 @@ namespace SIT.Coop.Core.LocalGame
 							Singleton<JobScheduler>.Instance.SetForceMode(enable: true);
 							await Singleton<PoolManager>
 								.Instance
-								.LoadBundlesAndCreatePools(PoolManager.PoolsCategory.Raid, PoolManager.AssemblyType.Local, allPrefabPaths.ToArray(), GClass2637.General, new GClass2558<GStruct94>(delegate (GStruct94 p)
+								.LoadBundlesAndCreatePools(
+								PoolManager.PoolsCategory.Raid, PoolManager.AssemblyType.Local, allPrefabPaths.ToArray(), GJobYield.General, new GProgress<SProgress>(delegate (SProgress p)
+							//.LoadBundlesAndCreatePools(PoolManager.PoolsCategory.Raid, PoolManager.AssemblyType.Local, allPrefabPaths.ToArray(), GClass2637.General, new GClass2558<GStruct94>(delegate (GStruct94 p)
 							{
 								//this.QuickLog($"Update::Loading a new Player {newPlayerToSpawn.Item1.AccountId}:{p.Stage}:{p.Progress}");
 							})).ContinueWith((Task t) => {
@@ -536,7 +488,9 @@ namespace SIT.Coop.Core.LocalGame
 									prc.player = result;
 									PlayersToAddActivePlayerToAI.Add((result, DateTime.Now));
 									PlayersToSpawn.TryRemove(accountId, out _);
-                                }
+									result.Teleport(spawnPosition, true);
+
+								}
 								else
 								{
 									this.QuickLog("Unable to Add new Player to Players Collection");
@@ -593,10 +547,16 @@ namespace SIT.Coop.Core.LocalGame
 
 		void FixedUpdate()
 		{
-
+			if (!doingClientSpawnPlayersWork)
+			{
+				doingClientSpawnPlayersWork = true;
+				UpdateClientSpawnPlayers();
+				doingClientSpawnPlayersWork = false;
+			}
 		}
 
 		bool doingclientwork = false;
+		bool doingClientSpawnPlayersWork = false;
 
 		void Update()
 		{
@@ -604,8 +564,7 @@ namespace SIT.Coop.Core.LocalGame
 			{
 				doingclientwork = true;
 				//UpdateParityCheck();
-                UpdateClientSpawnPlayers();
-				UpdateAddPlayersToAICalc();
+				//UpdateAddPlayersToAICalc();
 				RunQueuedActions();
 
                 doingclientwork = false;

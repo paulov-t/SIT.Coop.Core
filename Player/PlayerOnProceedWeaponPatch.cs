@@ -28,7 +28,11 @@ namespace SIT.Coop.Core.Player
         [PatchPostfix]
         public static void Patch(EFT.Player __instance, EFT.InventoryLogic.Weapon weapon)
         {
+            if (Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer)
+                return;
+
             Logger.LogInfo($"PlayerOnProceedWeaponPatch:Patch");
+
 
         }
     }

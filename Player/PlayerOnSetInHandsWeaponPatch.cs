@@ -11,7 +11,7 @@ using EFT;
 
 namespace SIT.Coop.Core.Player
 {
-    internal class PlayerOnSetItemInHandsPatch : ModulePatch
+    internal class PlayerOnSetInHandsWeaponPatch : ModulePatch
     {
         protected override MethodBase GetTargetMethod()
         {
@@ -20,26 +20,30 @@ namespace SIT.Coop.Core.Player
                 Logger.LogInfo($"PlayerOnSetItemInHandsPatch:Type is NULL");
 
             var method = PatchConstants.GetAllMethodsForType(t)
-                .FirstOrDefault(x => x.Name == "SetItemInHands"
+                .FirstOrDefault(x => x.Name == "SetInHands"
+                && x.GetParameters()[0].Name == "weapon"
                 );
 
-            Logger.LogInfo($"PlayerOnSetItemInHandsPatch:{t.Name}:{method.Name}");
+            Logger.LogInfo($"PlayerOnSetInHandsWeaponPatch:{t.Name}:{method.Name}");
             return method;
         }
 
         [PatchPostfix]
-        public static void Patch(EFT.Player __instance, Item item)
+        public static void Patch(EFT.Player __instance, EFT.InventoryLogic.Weapon weapon)
         {
             Dictionary<string, object> dictionary = new Dictionary<string, object>();
-            dictionary.Add("item.id", item.Id);
-            dictionary.Add("item.tpl", item.TemplateId);
-            dictionary.Add("m", "SetItemInHands");
+            //dictionary.Add("item.id", weapon.Id);
+            //dictionary.Add("item.tpl", weapon.TemplateId);
+            dictionary.Add("weapon", weapon.SITToJson());
+            dictionary.Add("m", "SetInHands.Weapon");
             ServerCommunication.PostLocalPlayerData(__instance, dictionary);
         }
 
-        internal static void SetItemInHandsReplicated(LocalPlayer player, Dictionary<string, object> packet)
+        internal static void SetInHandsReplicated(LocalPlayer player, Dictionary<string, object> packet)
         {
-            //PatchConstants.Logger.LogInfo("SetItemInHands");
+            PatchConstants.Logger.LogInfo("PlayerOnSetInHandsWeaponPatch");
+            var w = PatchConstants.SITParseJson<EFT.InventoryLogic.Weapon>(packet["weapon"].ToString());
+            player.SetInHands(w, null);
 
         }
     }

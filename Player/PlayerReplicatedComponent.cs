@@ -68,7 +68,8 @@ namespace SIT.Coop.Core.Player
 
             UpdateMovement();
 
-            if (!handlingPackets && player != null && QueuedPackets.Any())
+            if (player != null && QueuedPackets.Any())
+            //if (!handlingPackets && player != null && QueuedPackets.Any())
             {
                 handlingPackets = true;
 
@@ -153,7 +154,7 @@ namespace SIT.Coop.Core.Player
                             PlayerOnInventoryOpenedPatch.InventoryOpenedReplicated(player, packet);
                             break;
                         case "Tilt":
-                            PlayerOnTiltPatch.TiltReplicated(player, packet);
+                            //PlayerOnTiltPatch.TiltReplicated(player, packet);
                             break;
                         case "Proceed":
                             switch(packet["pType"].ToString())
@@ -211,7 +212,9 @@ namespace SIT.Coop.Core.Player
             {
                 if (player.MovementContext != null)
                 {
-                    if (this.LastTiltLevel != player.MovementContext.Tilt)
+                    if (this.LastTiltLevel != player.MovementContext.Tilt 
+                        && (this.LastTiltLevel - player.MovementContext.Tilt > 0.1f || this.LastTiltLevel - player.MovementContext.Tilt < -0.1f)
+                        )
                     {
                         this.LastTiltLevel = player.MovementContext.Tilt;
                         Dictionary<string, object> dictionary = new Dictionary<string, object>();
@@ -226,7 +229,7 @@ namespace SIT.Coop.Core.Player
                     //var rotationDot = Vector2.Dot(player.Rotation, LastRotation);
                     var rotationAngle = Quaternion.Angle(player.MovementContext.TransformRotation, LastRotation.Value);
 
-                    if (player.MovementContext.TransformRotation != this.LastRotation && rotationAngle > 15)
+                    if (player.MovementContext.TransformRotation != this.LastRotation && rotationAngle > 16)
                     {
                         this.LastRotation = player.MovementContext.TransformRotation;
                         Dictionary<string, object> dictionary = new Dictionary<string, object>();

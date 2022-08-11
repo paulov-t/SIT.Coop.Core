@@ -79,22 +79,34 @@ namespace SIT.Coop.Core.Player.Weapon
 
         public static void WeaponOnTriggerPressedReplicated(EFT.Player player, Dictionary<string, object> packet)
         {
-            ReceivedPackets.Add(packet);
-            ReceivedPackets = ReceivedPackets.OrderBy(x => (float)x["t"]).ToList();
-            for (var i = 0; i < ReceivedPackets.Count; i++)  
+            // I send packets, don't receive it
+            if (lastTriggerPressedPacketSent.ContainsKey(player.Profile.AccountId))
+                return;
+
+            if (packet.ContainsKey("pressed"))
             {
-                Logger.LogInfo("Processing SetTriggerPressed");
-                var cPacket = ReceivedPackets[i];
-                if (cPacket["m"].ToString() != "SetTriggerPressed")
-                    continue;
                 var firearmController = GetFirearmController(player);
                 if (firearmController != null)
                 {
-                    firearmController.SetTriggerPressed(bool.Parse(cPacket["pressed"].ToString()));
+                    firearmController.SetTriggerPressed(bool.Parse(packet["pressed"].ToString()));
                 }
             }
-            ReceivedPackets.Clear();
-            
+            //ReceivedPackets.Add(packet);
+            //ReceivedPackets = ReceivedPackets.OrderBy(x => (float)x["t"]).ToList();
+            //for (var i = 0; i < ReceivedPackets.Count; i++)  
+            //{
+            //    Logger.LogInfo("Processing SetTriggerPressed");
+            //    var cPacket = ReceivedPackets[i];
+            //    if (cPacket["m"].ToString() != "SetTriggerPressed")
+            //        continue;
+            //    var firearmController = GetFirearmController(player);
+            //    if (firearmController != null)
+            //    {
+            //        firearmController.SetTriggerPressed(bool.Parse(cPacket["pressed"].ToString()));
+            //    }
+            //}
+            //ReceivedPackets.Clear();
+
         }
     }
 }
