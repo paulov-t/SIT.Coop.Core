@@ -78,17 +78,36 @@ namespace SIT.Coop.Core.Web
 				//backendUrlPort = array[2];
 				PatchConstants.Logger.LogInfo("Setting ServerCommunicationCoopImplementation backendurlip::" + backendUrlIp);
 			}
-			var returnedIp = new Request().PostJson("/client/match/group/server/getGameServerIp", data: dataDict.ToJson());
-			if (!string.IsNullOrEmpty(returnedIp))
+			//var returnedIp = new Request().PostJson("/client/match/group/server/getGameServerIp", data: dataDict.ToJson());
+			//if (!string.IsNullOrEmpty(returnedIp))
+			//{
+			//	if (IPAddress.TryParse(returnedIp, out _))
+			//	{
+			//		backendUrlIp = returnedIp;
+			//	}
+			//}
+			dataDict.Clear();
+			var returnedIpPort = new Request().PostJson("/coop/getCoopIpAndPort", data: dataDict.ToJson());
+			if (!string.IsNullOrEmpty(returnedIpPort))
 			{
-				if (IPAddress.TryParse(returnedIp, out _))
-				{
-					backendUrlIp = returnedIp;
-				}
+				var returnedIpPortDictionary = JsonConvert.DeserializeObject<Dictionary<string, string>>(returnedIpPort);
+				if(returnedIpPortDictionary != null)
+                {
+					if(returnedIpPortDictionary.ContainsKey("ip"))
+                    {
+						backendUrlIp = returnedIpPortDictionary["ip"];
+                    }
+					if (returnedIpPortDictionary.ContainsKey("port"))
+                    {
+						udpServerPort = int.Parse(returnedIpPortDictionary["port"]);
+                    }
+                }
 			}
+
 			PatchConstants.Logger.LogInfo("GetUdpClient::Game Server IP is " + backendUrlIp);
 
-			UdpClient udpClient = new UdpClient(backendUrlIp, (reliable ? udpServerPort + 1 : udpServerPort));
+			//UdpClient udpClient = new UdpClient(backendUrlIp, (reliable ? udpServerPort + 1 : udpServerPort));
+			UdpClient udpClient = new UdpClient(backendUrlIp, udpServerPort);
 			udpClient.Client.SendBufferSize = 16384;
 			udpClient.Client.ReceiveBufferSize = 16384;
 			udpClient.Client.ReceiveTimeout = 0;
@@ -194,7 +213,12 @@ namespace SIT.Coop.Core.Web
 
 		public static async Task SendDataDownWebSocket(object data, bool reliable = false)
 		{
-			if (MatchmakerAcceptPatches.IsSinglePlayer || CommunicationError)
+			if(CommunicationError)
+            {
+				LoggingCoopImplementation.QuickLog("SendDataDownWebSocket::Communication Error is preventing you sending shit!");
+				return;
+            }
+			if (MatchmakerAcceptPatches.IsSinglePlayer )
 				return;
 
 			int attemptCountdown = 30;
