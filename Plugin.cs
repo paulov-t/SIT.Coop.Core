@@ -24,10 +24,14 @@ namespace SIT.Coop.Core
             UDPPort = Config.Bind<int>("Server", "Port", 7070).Value;
 
             new LocalGameStartingPatch(Config).Enable();
+            new LocalGameEndingPatch(Config).Enable();
 
 
             // ------ SPAWN --------------------------
             new LocalGamePlayerSpawn().Enable();
+
+            // ------ PLAYER -------------------------
+            new PlayerOnInitPatch(Config).Enable();
 
             // ------ PLAYER -------------------------
             new PlayerOnDamagePatch().Enable();
@@ -65,9 +69,13 @@ namespace SIT.Coop.Core
             //    new LocalGameStartBotSystemPatch().Disable();
         }
 
+        public static Scene CurrentScene { get; set; }
+
         private void SceneManager_sceneLoaded(Scene arg0, LoadSceneMode arg1)
         {
+            CurrentScene = arg0;
             //if(LocalGamePatches.LocalGameInstance != null)
+
         }
 
         private void EchoGameServer_OnLog(string text)

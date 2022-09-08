@@ -1,6 +1,7 @@
 ﻿using BepInEx.Configuration;
 using Comfort.Common;
 using EFT;
+using Newtonsoft.Json;
 using SIT.Coop.Core.Player;
 using SIT.Coop.Core.Web;
 using SIT.Tarkov.Core;
@@ -24,24 +25,57 @@ namespace SIT.Coop.Core.LocalGame
         public static object BossSpawner;
         public static object BossSpawnerWaves;
         private static ConfigFile _config;
-        private static MethodInfo MethodInfoBotCreation;
+        //private static MethodInfo MethodInfoBotCreation;
         private static int maxCountOfBots = 20;
+        private static LocationSettings.SelectedLocation LocationSettings;
 
 
-        public LocalGameSpawnAICoroutinePatch(ConfigFile config)
+        public LocalGameSpawnAICoroutinePatch(ConfigFile config, BaseLocalGame<GamePlayerOwner> game)
         {
             _config = config;
+
+            var gameType = game.GetType().BaseType;
+            Logger.LogInfo($"LocalGameSpawnAICoroutinePatch:gameType:{gameType.Name}");
+            var gameInstance = game;
+            Logger.LogInfo($"LocalGameSpawnAICoroutinePatch:game:{gameInstance}");
+
+            Logger.LogInfo("LocalGameSpawnAICoroutinePatch:Get Boss Spawner");
+            BossSpawner = PatchConstants.GetFieldFromTypeByFieldType(
+                    gameType,
+                    typeof(BossSpawnerClass)).GetValue(game);
+
+            Logger.LogInfo("LocalGameSpawnAICoroutinePatch:Get Location Settings");
+
+            LocationSettings = (LocationSettings.SelectedLocation)PatchConstants.GetFieldFromTypeByFieldType(
+                    gameType,
+                    typeof(LocationSettings.SelectedLocation)).GetValue(LocalGamePatches.LocalGameInstance);
+
         }
 
         protected override MethodBase GetTargetMethod()
         {
-            BossSpawner = PatchConstants.GetFieldFromType(LocalGamePatches.LocalGameInstance.GetType().BaseType
-                , BotSystemHelpers.BossSpawnRunnerType.Name.ToLower() + "_0").GetValue(LocalGamePatches.LocalGameInstance);
+            //BossSpawner = PatchConstants.GetFieldFromType(LocalGamePatches.LocalGameInstance.GetType().BaseType
+            //    , BotSystemHelpers.BossSpawnRunnerType.Name.ToLower() + "_0").GetValue(LocalGamePatches.LocalGameInstance);
+            //BossSpawner = PatchConstants.GetFieldFromTypeByFieldType(
+            //        LocalGamePatches.LocalGameInstance.GetType(),
+            //        typeof(BossSpawnerClass)).GetValue(LocalGamePatches.LocalGameInstance);
+
+            //Logger.LogInfo("LocalGameSpawnAICoroutinePatch:Get Location Settings");
+
+            //LocationSettings = (LocationSettings.SelectedLocation)PatchConstants.GetFieldFromTypeByFieldType(
+            //        LocalGamePatches.LocalGameInstance.GetType(),
+            //        typeof(LocationSettings.SelectedLocation)).GetValue(LocalGamePatches.LocalGameInstance); 
+
+
+            //PatchConstants.GetFieldOrPropertyFromInstance<object>(LocalGamePatches.LocalGameInstance, BotSystemHelpers.BossSpawnRunnerType.Name.ToLower() + "_0", false);
+            //Logger.LogInfo($"BossSpawner:{BossSpawner.GetType().Name}");
+
             BossSpawnerWaves = PatchConstants.GetFieldOrPropertyFromInstance<object>(BossSpawner, "BossSpawnWaves", false);
+            //Logger.LogInfo($"BossSpawnerWaves:{BossSpawnerWaves.GetType().Name}");
 
-            MethodInfoBotCreation = PatchConstants.GetMethodForType(LocalGamePatches.LocalGameInstance.GetType().BaseType, "method_8");
+            //MethodInfoBotCreation = PatchConstants.GetMethodForType(LocalGamePatches.LocalGameInstance.GetType().BaseType, "method_8");
 
-            return PatchConstants.GetAllMethodsForType(LocalGamePatches.LocalGameInstance.GetType().BaseType)
+            var targetMethod = PatchConstants.GetAllMethodsForType(LocalGamePatches.LocalGameInstance.GetType().BaseType)
                 .Single(
                 m =>
                 m.IsVirtual
@@ -50,6 +84,9 @@ namespace SIT.Coop.Core.LocalGame
                 && m.GetParameters()[0].Name == "startDelay"
                 && m.GetParameters()[1].Name == "controllerSettings"
                 );
+
+            //Logger.LogInfo($"LocalGameSpawnAICoroutinePatch.TargetMethod:{targetMethod.Name}");
+            return targetMethod;
         }
 
         //[PatchPrefix]
@@ -63,115 +100,132 @@ namespace SIT.Coop.Core.LocalGame
         //    return true;
         //}
 
+        [PatchPrefix]
+        public static bool PatchPrefix()
+        {
+            return false;
+        }
+
         [PatchPostfix]
-        //public static IEnumerator PatchPostfix(
-        //float startDelay, object controllerSettings, object spawnSystem, object runCallback,
-        //GClass1222 ___gclass1222_0
-        //)
         public static IEnumerator PatchPostfix(
             IEnumerator __result,
-            //GClass1222 ___gclass1222_0,
-            //GClass543 ___gclass543_0,
-            object spawnSystem,
+            BaseLocalGame<GamePlayerOwner> __instance,
+            ISpawnSystem spawnSystem,
             Callback runCallback,
             WavesSpawnScenario ___wavesSpawnScenario_0,
             NonWavesSpawnScenario ___nonWavesSpawnScenario_0
         )
         {
-            BotSystemHelpers.BotControllerInstance = PatchConstants.GetFieldOrPropertyFromInstance<object>(
-                   LocalGamePatches.LocalGameInstance
-                   , BotSystemHelpers.BotControllerType.Name + "_0"
-                   //, "gclass1222_0"
-                   , false);
-            //Logger.LogInfo($"bossSpawner:{BossSpawner}");
+            Logger.LogInfo($"LocalGameSpawnAICoroutinePatch:PatchPostfix");
 
             // Run normally.
             if (!Matchmaker.MatchmakerAcceptPatches.IsClient)
             {
+
+                // Wait for client to join 
+                // comment out to test general stuff
+                //if (Matchmaker.MatchmakerAcceptPatches.IsServer)
+                //{
+                //    if (CoopGameComponent.Players.Any())
+                //    {
+                //        var filteredPlayersOnlyCount = CoopGameComponent.Players.Count(x => !x.Value.IsAI);
+                //        while (filteredPlayersOnlyCount < Matchmaker.MatchmakerAcceptPatches.HostExpectedNumberOfPlayers)
+                //        {
+                //            filteredPlayersOnlyCount = CoopGameComponent.Players.Count(x => !x.Value.IsAI);
+                //            yield return new WaitForSeconds(1);
+                //        }
+                //    }
+                //}
+
+
+                //Logger.LogInfo($"BotSystemHelpers.RoleLimitDifficultyType.Name_0:{BotSystemHelpers.RoleLimitDifficultyType.Name + "_0"}");
                 //CoopGameComponent.Players.Clear();
                 var nonSpawnWaveShit = PatchConstants.GetFieldOrPropertyFromInstance<object>(
                     LocalGamePatches.LocalGameInstance
-                    , BotSystemHelpers.RoleLimitDifficultyType.Name + "_0"
+                    //, BotSystemHelpers.RoleLimitDifficultyType.Name + "_0"
+                    , "nonWavesSpawnScenario_0"
                     , false);
-                var openZones = PatchConstants.GetFieldOrPropertyFromInstance<object>(LocalGamePatches.LocalGameInstance, BotSystemHelpers.LocationBaseType.Name + "_0", false);
-                var openZones2 = PatchConstants.GetFieldOrPropertyFromInstance<string>(openZones, "OpenZones", false);
-
-                // Construct Profile Creator
-                var profileCreator = Activator.CreateInstance(
-                    BotSystemHelpers.ProfileCreatorType
-                    , PatchConstants.BackEndSession
-                    , ___wavesSpawnScenario_0.SpawnWaves
-                    , BossSpawnerWaves
-                    , nonSpawnWaveShit
-                    , false
-                    );
-
-                // Construct Bot Creator
-                var botCreator = Activator.CreateInstance(
-                    BotSystemHelpers.BotCreatorType
-                    , LocalGamePatches.LocalGameInstance
-                    , profileCreator
-                    ,
-                    PatchConstants.GetMethodForType(typeof(LocalGameSpawnAICoroutinePatch), "BotCreationMethod").CreateDelegate(LocalGamePatches.LocalGameInstance)
-
-                    );
-
-                BotZone[] botZones = LocationScene.GetAllObjects<BotZone>().ToArray();
-                bool enableWaveControl = true;
-
-
-                // Need to get this.gclass1222_0. and assign it in BotSystemHelpers first !
-                // TODO: Make this not directly go for gclass1222_0
-                BotSystemHelpers.BotControllerInstance = PatchConstants.GetFieldOrPropertyFromInstance<object>(
-                    LocalGamePatches.LocalGameInstance
-                    , BotSystemHelpers.BotControllerType.Name + "_0"
-                    //, "gclass1222_0"
-                    , false);
-                BotSystemHelpers.Init(LocalGamePatches.LocalGameInstance, botCreator, botZones, spawnSystem, ___wavesSpawnScenario_0.BotLocationModifier, true, false, enableWaveControl, false, false, Singleton<GameWorld>.Instance
-                    , openZones2);
-
-
-                // TODO: Max this use the EBotAmount from controllerSettings
-                var AICountOverride = _config.Bind("Server", "Override Number of AI", false).Value;
-                var NumberOfAI = _config.Bind("Server", "Number of AI", 15).Value;
-                if (AICountOverride)
+                //if (nonSpawnWaveShit != null)
                 {
-                    maxCountOfBots = NumberOfAI;
-                }
-                var backendConfig = PatchConstants.GetFieldOrPropertyFromInstance<object>(PatchConstants.BackEndSession, "BackEndConfig", false);
-                var botPresets = PatchConstants.GetFieldOrPropertyFromInstance<Array>(backendConfig, "BotPresets", false);
-                var botWeaponScatterings = PatchConstants.GetFieldOrPropertyFromInstance<Array>(backendConfig, "BotWeaponScatterings", false);
+                    Logger.LogInfo($"nonSpawnWaveShit:{nonSpawnWaveShit.GetType().Name}");
 
-                Logger.LogInfo($"Max Number of Bots:{maxCountOfBots}");
-                BotSystemHelpers.SetSettings(maxCountOfBots, botPresets, botWeaponScatterings);
-                var AIIgnorePlayers = _config.Bind("Server", "AI Ignore Players", false).Value;
-                if(!AIIgnorePlayers)
-                {
-                    var gparam = PatchConstants.GetFieldOrPropertyFromInstance<object>(LocalGamePatches.LocalGameInstance, "gparam_0", false);
-                    var player = PatchConstants.GetFieldOrPropertyFromInstance<EFT.Player>(gparam, "Player", false);
-                    BotSystemHelpers.AddActivePlayer(player);
-                }
-                yield return new WaitForSeconds(1);
+                    // this doesn't work because the gclass name isn't the same as the member name, need a work around
+                    //var openZones = PatchConstants.GetFieldOrPropertyFromInstance<object>(LocalGamePatches.LocalGameInstance, BotSystemHelpers.LocationBaseType.Name + "_0", false);
+                    var openZones = LocationSettings;// PatchConstants.GetFieldOrPropertyFromInstance<object>(__instance, "GClass1113_0", false);
+                    var openZones2 = PatchConstants.GetFieldOrPropertyFromInstance<string>(openZones, "OpenZones", false);
 
-                if (___wavesSpawnScenario_0.SpawnWaves != null && ___wavesSpawnScenario_0.SpawnWaves.Length != 0)
-                {
-                    ___wavesSpawnScenario_0.Run();
-                }
-                else
-                {
-                    ___nonWavesSpawnScenario_0.Run();
-                }
-                yield return new WaitForSeconds(1);
+                    //Logger.LogInfo($"BotSystemHelpers.ProfileCreatorType:{BotSystemHelpers.ProfileCreatorType.Name}");
+                    // Construct Profile Creator
+                    var profileCreator = new BotPresetFactory1(PatchConstants.BackEndSession, ___wavesSpawnScenario_0.SpawnWaves, (BossLocationSpawn[])BossSpawnerWaves, null, false);
 
-                PatchConstants.GetMethodForType(BossSpawner.GetType(), "Run").Invoke(BossSpawner, new object[] { EBotsSpawnMode.Anyway });
-                yield return new WaitForSeconds(1);
+                    BotCreator1 botCreator = new BotCreator1(__instance, profileCreator, BotCreationMethod);
 
-                using (PatchConstants.StartWithToken("SessionRun"))
-                {
-                    // TODO: This needs removing!
-                    PatchConstants.GetMethodForType(LocalGamePatches.LocalGameInstance.GetType(), "vmethod_4").Invoke(LocalGamePatches.LocalGameInstance, new object[0]);
+                    BotZone[] botZones = LocationScene.GetAllObjects<BotZone>().ToArray();
+                    bool enableWaveControl = true;
+
+                    __instance.BotsController.Init(
+                        __instance
+                        , botCreator
+                        , botZones
+                        , spawnSystem
+                        , ___wavesSpawnScenario_0.BotLocationModifier
+                        , true
+                        , false
+                        , enableWaveControl
+                        , false
+                        , false
+                        , Singleton<GameWorld>.Instance
+                        , openZones2);
+                    
+                    var AICountOverride = _config.Bind("Server", "Override Number of AI", false).Value;
+                    var NumberOfAI = _config.Bind("Server", "Number of AI", 15).Value;
+                    if (AICountOverride)
+                    {
+                        maxCountOfBots = NumberOfAI;
+                    }
+                    var backendConfig = PatchConstants.BackEndSession.BackEndConfig;
+                    var botPresets = backendConfig.BotPresets;
+                    var botWeaponScatterings = backendConfig.BotWeaponScatterings;
+
+                    Logger.LogInfo($"Max Number of Bots:{maxCountOfBots}");
+                    __instance.BotsController.SetSettings(maxCountOfBots, botPresets, botWeaponScatterings);
+                    //BotSystemHelpers.SetSettings(maxCountOfBots, botPresets, botWeaponScatterings);
+                    var AIIgnorePlayers = _config.Bind("Server", "AI Ignore Players", false).Value;
+                    if (!AIIgnorePlayers)
+                    {
+                        //var gparam = PatchConstants.GetFieldOrPropertyFromInstance<object>(LocalGamePatches.LocalGameInstance, "gparam_0", false);
+                        //var player = PatchConstants.GetFieldOrPropertyFromInstance<EFT.Player>(gparam, "Player", false);
+                        //BotSystemHelpers.AddActivePlayer(player);
+                        __instance.BotsController.AddActivePLayer(__instance.AllPlayers[0]);
+                    }
+                    yield return new WaitForSeconds(1);
+
+                    var EnableAISpawnWaveSystem = _config.Bind("Server", "Enable AI Spawn Wave System", true
+                        , new ConfigDescription("Whether to run the Wave Spawner System. Useful for testing.")).Value;
+                    if (EnableAISpawnWaveSystem)
+                    {
+                        if (___wavesSpawnScenario_0.SpawnWaves != null && ___wavesSpawnScenario_0.SpawnWaves.Length != 0)
+                        {
+                            ___wavesSpawnScenario_0.Run();
+                        }
+                        else
+                        {
+                            ___nonWavesSpawnScenario_0.Run();
+                        }
+
+                        PatchConstants.GetMethodForType(BossSpawner.GetType(), "Run").Invoke(BossSpawner, new object[] { EBotsSpawnMode.Anyway });
+                    }
+                    yield return new WaitForSeconds(3);
+
+                    using (PatchConstants.StartWithToken("SessionRun"))
+                    {
+                        // TODO: This needs removing!
+                        PatchConstants.GetMethodForType(LocalGamePatches.LocalGameInstance.GetType(), "vmethod_4").Invoke(LocalGamePatches.LocalGameInstance, new object[0]);
+                    }
+                    yield return new WaitForSeconds(1);
+
+                   
                 }
-                yield return new WaitForSeconds(1);
 
                 runCallback.Succeed();
             }
@@ -246,6 +300,10 @@ namespace SIT.Coop.Core.LocalGame
                             "SERVER"
                         },
                         {
+                            "isAI",
+                            true
+                        },
+                        {
                             "accountId",
                             player.Profile.AccountId
                         },
@@ -272,7 +330,9 @@ namespace SIT.Coop.Core.LocalGame
                         { "m", "PlayerSpawn" },
                         {
                             "p.info",
-                            player.Profile.Info.SITToJson()
+                            JsonConvert.SerializeObject(player.Profile.Info
+                                , Formatting.None 
+                                , new JsonSerializerSettings() { })//.SITToJson()
                         },
                         {
                             "p.cust",
@@ -280,7 +340,8 @@ namespace SIT.Coop.Core.LocalGame
                         },
                         {
                             "p.equip",
-                            player.Profile.Inventory.Equipment.CloneItem().ToJson()
+                            //player.Profile.Inventory.Equipment.CloneItem().ToJson()
+                            player.Profile.Inventory.Equipment.SITToJson()
                         }
                     };
                 //new Request().PostJson("/client/match/group/server/players/spawn", dictionary2.ToJson());

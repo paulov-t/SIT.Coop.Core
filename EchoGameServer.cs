@@ -105,8 +105,8 @@ namespace CoopTarkovGameServer
 
         public void CreateListenersAndStart()
         {
-            var internalIPString = new Request().PostJson("/ServerInternalIPAddress", null);
-            var externalIPString = new Request().PostJson("/ServerExternalIPAddress", null);
+            var internalIPString = new SIT.Tarkov.Core.Request().PostJson("/ServerInternalIPAddress", null);
+            var externalIPString = new SIT.Tarkov.Core.Request().PostJson("/ServerExternalIPAddress", null);
             if (string.IsNullOrEmpty(internalIPString))
                 internalIPString = "127.0.0.1";
 

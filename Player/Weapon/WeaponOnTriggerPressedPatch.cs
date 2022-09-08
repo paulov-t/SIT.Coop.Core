@@ -24,7 +24,7 @@ namespace SIT.Coop.Core.Player.Weapon
             var method = PatchConstants.GetAllMethodsForType(t)
                 .FirstOrDefault(x => x.Name == "SetTriggerPressed");
 
-            Logger.LogInfo($"WeaponOnTriggerPressedPatch:{t.Name}:{method.Name}");
+            //Logger.LogInfo($"WeaponOnTriggerPressedPatch:{t.Name}:{method.Name}");
             return method;
         }
 
@@ -42,11 +42,12 @@ namespace SIT.Coop.Core.Player.Weapon
 
         [PatchPostfix]
         public static void PatchPostfix(
-            EFT.Player.ItemHandsController __instance,
+            //EFT.Player.ItemHandsController __instance,
+            EFT.Player.FirearmController __instance,
             bool pressed
             )
         {
-            if (Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer)
+            if (Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer || BlockPressed)
                 return;
 
             var player = PatchConstants.GetAllFieldsForObject(__instance).First(x => x.Name == "_player").GetValue(__instance) as EFT.Player;
@@ -76,6 +77,7 @@ namespace SIT.Coop.Core.Player.Weapon
         }
 
         private static List<Dictionary<string, object>> ReceivedPackets = new List<Dictionary<string, object>>();
+        public static bool BlockPressed = false;
 
         public static void WeaponOnTriggerPressedReplicated(EFT.Player player, Dictionary<string, object> packet)
         {
@@ -86,9 +88,11 @@ namespace SIT.Coop.Core.Player.Weapon
             if (packet.ContainsKey("pressed"))
             {
                 var firearmController = GetFirearmController(player);
-                if (firearmController != null)
+                if (firearmController != null && bool.TryParse(packet["pressed"].ToString(), out var pressed))
                 {
-                    firearmController.SetTriggerPressed(bool.Parse(packet["pressed"].ToString()));
+                    BlockPressed = true;
+                    firearmController.SetTriggerPressed(pressed);
+                    BlockPressed = false;
                 }
             }
             //ReceivedPackets.Add(packet);

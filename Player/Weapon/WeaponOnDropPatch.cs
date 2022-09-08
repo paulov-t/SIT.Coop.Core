@@ -21,7 +21,7 @@ namespace SIT.Coop.Core.Player.Weapon
             var method = PatchConstants.GetAllMethodsForType(t)
                 .FirstOrDefault(x => x.Name == "Drop");
 
-            Logger.LogInfo($"WeaponOnDropPatch:{t.Name}:{method.Name}");
+            //Logger.LogInfo($"WeaponOnDropPatch:{t.Name}:{method.Name}");
             return method;
         }
 

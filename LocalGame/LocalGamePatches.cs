@@ -63,7 +63,7 @@ namespace SIT.Coop.Core.LocalGame
 			return StatisticsManager;	
         }
 
-		public static object MyPlayer { get; set; }
+		public static EFT.Player MyPlayer { get; set; }
 
 		public static EFT.Profile MyPlayerProfile
 		{

@@ -71,10 +71,13 @@ namespace SIT.Coop.Core.Matchmaker
             ref ERaidMode ___eraidMode_0
             )
         {
-			//Logger.LogInfo("MatchmakerAcceptScreenAwakePatch.PatchPrefix");
+            //Logger.LogInfo("MatchmakerAcceptScreenAwakePatch.PatchPrefix");
 
-			
-			MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance = __instance;
+            // ----------------------------------------------------
+            // Reset number of players for next Raid
+            MatchmakerAcceptPatches.HostExpectedNumberOfPlayers = 1;
+
+            MatchmakerAcceptPatches.MatchMakerAcceptScreenInstance = __instance;
             screenController = MatchmakerAcceptPatches.MatchmakerScreenController;
             ___eraidMode_0 = ERaidMode.Online;
             //var screenControllerFieldInfo = __instance.GetType().GetField("ScreenController", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy);

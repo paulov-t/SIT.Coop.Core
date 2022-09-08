@@ -29,6 +29,9 @@
     <Reference Include="bsg.componentace.compression.libs.zlib">
       <HintPath>..\Tarkov.References\bsg.componentace.compression.libs.zlib.dll</HintPath>
     </Reference>
+    <Reference Include="com.unity.multiplayer-hlapi.Runtime">
+      <HintPath>..\Tarkov.References\com.unity.multiplayer-hlapi.Runtime.dll</HintPath>
+    </Reference>
     <Reference Include="Comfort">
       <HintPath>..\Tarkov.References\Comfort.dll</HintPath>
     </Reference>

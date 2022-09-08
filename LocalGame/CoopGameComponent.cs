@@ -17,6 +17,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Networking;
+using UnityEngine.Networking.Match;
 
 namespace SIT.Coop.Core.LocalGame
 {
@@ -53,27 +55,121 @@ namespace SIT.Coop.Core.LocalGame
 			return Profile;
 		}
 	}
-	public class CoopGameComponent : MonoBehaviour
-	{
+#pragma warning disable CS0618 // Type or member is obsolete
+    public class CoopGameComponent : NetworkBehaviour
+    {
 		BepInEx.Logging.ManualLogSource Logger;
+
+		public static List<string> PeopleParityRequestedAccounts = new List<string>();
+
+		public static Vector3? ClientSpawnLocation;
+
+		private readonly ConcurrentDictionary<string, (Profile, Vector3, ESpawnState)> PlayersToSpawn = new ConcurrentDictionary<string, (Profile, Vector3, ESpawnState)>();
+
+		/// <summary>
+		/// Player, Time spawned -> Handled by UpdateAddPlayersToAICalc
+		/// </summary>
+		private readonly List<(EFT.LocalPlayer, DateTime)> PlayersToAddActivePlayerToAI = new List<(EFT.LocalPlayer, DateTime)>();
+
+		private readonly ConcurrentDictionary<string, string> AccountsLoading = new ConcurrentDictionary<string, string>();
+
+		bool doingclientwork = false;
+
+		bool doingClientSpawnPlayersWork = false;
+
+		private SITNetworkManager HostNetworkManager { get; set; }
+		private NetworkClient HostNetworkClient { get; set; }
+
+		public static ConnectionConfig GetConnectionConfig()
+        {
+			var cc = new ConnectionConfig() { };
+			return cc;
+		}
+
+		//public static MatchInfo GetMatchInfo()
+		//{
+		//	MatchInfo matchInfo = new MatchInfo();
+		//	matchInfo.address = "127.0.0.1";
+		//	matchInfo.port = 5555;
+		//	matchInfo.usingRelay = false;
+		//	return matchInfo;
+		//}
+
+		#region Unity Component Methods
 
 		void Awake()
 		{
+			// ----------------------------------------------------
+			// Always clear "Players" when creating a new CoopGameComponent
 			Players.Clear();
 
+			// ----------------------------------------------------
+			// Create a BepInEx Logger for CoopGameComponent
 			Logger = BepInEx.Logging.Logger.CreateLogSource("CoopGameComponent");
-			//Logger.LogInfo("CoopGameComponent:Awake");
+
+			//HostNetworkManager = this.GetOrAddComponent<SITNetworkManager>();
+			//if (NetworkManager.singleton == null)
+			//	NetworkManager.singleton = HostNetworkManager;
+
+			//if (HostNetworkManager != null && MatchmakerAcceptPatches.IsServer && HostNetworkClient == null)
+			//{
+			//	Logger.LogInfo("HostNetworkClient: Start Host");
+			//	HostNetworkManager.offlineScene = Plugin.CurrentScene.name;
+			//	HostNetworkManager.onlineScene = Plugin.CurrentScene.name;
+			//	HostNetworkClient = HostNetworkManager.StartHost(GetMatchInfo());
+			//	HostNetworkClient.RegisterHandler(0, (NetworkMessage message) => {
+
+			//		Logger.LogInfo("Host Client Received 0 Message");
+
+			//	});
+			//	HostNetworkClient.RegisterHandler(999, (NetworkMessage message) => {
+
+			//		Logger.LogInfo("Host Client Received 999 Message"); 
+					
+			//	});
+			//}
 		}
 
 		void Start()
 		{
 			//Logger.LogInfo("CoopGameComponent:Start");
-			//((MonoBehaviour)this).InvokeRepeating("RunQueuedActions", 0, 0.33f);
-			//((MonoBehaviour)this).InvokeRepeating("RunParityCheck", 0, 1f);
+
+
+			// ----------------------------------------------------
+			// Consume Data Received from ServerCommunication class
             ServerCommunication.OnDataReceived += ServerCommunication_OnDataReceived;
             ServerCommunication.OnDataStringReceived += ServerCommunication_OnDataStringReceived;
             ServerCommunication.OnDataArrayReceived += ServerCommunication_OnDataArrayReceived;
+			// ----------------------------------------------------
 		}
+
+		void FixedUpdate()
+		{
+			//if (!doingClientSpawnPlayersWork)
+			{
+				doingClientSpawnPlayersWork = true;
+				UpdateClientSpawnPlayers();
+				doingClientSpawnPlayersWork = false;
+			}
+		}
+
+	
+		void Update()
+		{
+			//if (!doingclientwork)
+			{
+				doingclientwork = true;
+				//UpdateParityCheck();
+				//UpdateAddPlayersToAICalc();
+				RunQueuedActions();
+
+				
+
+				doingclientwork = false;
+			}
+		}
+
+        #endregion
 
         private void ServerCommunication_OnDataArrayReceived(string[] array)
         {
@@ -97,17 +193,6 @@ namespace SIT.Coop.Core.LocalGame
 							}
 						});
 					}
-
-					//var parsedItem = Json.Deserialize<Dictionary<string, object>>(item);
-					//if (parsedItem != null)
-					//            {
-					//	QueuedPackets.Enqueue(parsedItem);
-
-					//	//if (parsedItem.ContainsKey("m") && parsedItem["m"].ToString() == "PlayerSpawn")
-					// //               {
-
-					//	//}
-					//}
 				}
 			}
 			catch (Exception)
@@ -188,29 +273,18 @@ namespace SIT.Coop.Core.LocalGame
 			// Unable to find profile. Ask Server to resend the data
 			//if (LastPeopleParityCheck < DateTime.Now.AddSeconds(-30))
 			//{
-			if (!PeopleParityRequestedAccounts.Contains(accountId))
-			{
-				PeopleParityRequestedAccounts.Add(accountId);
-				_ = ServerCommunication.SendDataDownWebSocket("PeopleParityRequest=" + accountId + "=" + LocalGamePatches.MyPlayerProfile.AccountId);
-			}
+			//if (!PeopleParityRequestedAccounts.Contains(accountId))
+			//{
+			//	PeopleParityRequestedAccounts.Add(accountId);
+			//	_ = ServerCommunication.SendDataDownWebSocket("PeopleParityRequest=" + accountId + "=" + LocalGamePatches.MyPlayerProfile.AccountId);
+			//}
 			//	LastPeopleParityCheck = DateTime.Now;
 			//}
 			return null;
 
 		}
 
-		public static List<string> PeopleParityRequestedAccounts = new List<string>();
-
-		public static Vector3? ClientSpawnLocation;
-
-		private readonly ConcurrentDictionary<string, (Profile, Vector3, ESpawnState)> PlayersToSpawn = new ConcurrentDictionary<string, (Profile, Vector3, ESpawnState)>();
-
-		/// <summary>
-		/// Player, Time spawned -> Handled by UpdateAddPlayersToAICalc
-		/// </summary>
-		private readonly List<(EFT.LocalPlayer, DateTime)> PlayersToAddActivePlayerToAI = new List<(EFT.LocalPlayer, DateTime)>();
-
-		private readonly ConcurrentDictionary<string, string> AccountsLoading = new ConcurrentDictionary<string, string>();
+	
 
 		private void DataReceivedClient_PlayerBotSpawn(Dictionary<string, object> parsedDict, string accountId, string profileId, Vector3 newPosition, bool isBot)
 		{
@@ -235,25 +309,22 @@ namespace SIT.Coop.Core.LocalGame
 					this.AccountsLoading.TryAdd(accountId, null);
 					Profile profile = LocalGamePatches.MyPlayerProfile.Clone();
 					profile.AccountId = accountId;
-					profile.Id = profileId;
+					profile.Id = accountId;//  profileId;
 					profile.Info.Nickname = "Dickhead " + Players.Count;
 					profile.Info.Side = isBot ? EPlayerSide.Savage : EPlayerSide.Usec;
 					if (parsedDict.ContainsKey("p.info"))
 					{
-						var profileInfo = JObject.Parse(parsedDict["p.info"].ToString());
-						profile.Info.Nickname = profileInfo.Property("Nickname").Value.ToString();
-						profile.Info.Side = (EPlayerSide)Enum.Parse(typeof(EPlayerSide), profileInfo.Property("Side").Value.ToString());
-						if(profileInfo.ContainsKey("Voice"))
-                        {
-							profile.Info.Voice = profileInfo["Voice"].ToString();
-						}
-						//var info = parsedDict["p.info"].ToString().ParseJsonTo<GClass1443>(Array.Empty<JsonConverter>());
-						//if (info != null)
-						//{
-						//	profile.Info.Nickname = info.Nickname;
-						//	profile.Info.Side = info.Side;
-						//	profile.Info.Voice = info.Voice;
+						//var profileInfo =  JObject.Parse(parsedDict["p.info"].ToString());
+						//profile.Info.Nickname = profileInfo.Property("Nickname").Value.ToString();
+						//profile.Info.Side = (EPlayerSide)Enum.Parse(typeof(EPlayerSide), profileInfo.Property("Side").Value.ToString());
+						//if(profileInfo.ContainsKey("Voice"))
+						//                  {
+						//	profile.Info.Voice = profileInfo["Voice"].ToString();
 						//}
+						Logger.LogInfo("DataReceivedClient_PlayerBotSpawn:: Converting Profile data");
+						//profile.Info = parsedDict["p.info"].ToString().ParseJsonTo<ProfileData>(Array.Empty<JsonConverter>());
+						profile.Info = PatchConstants.SITParseJson<ProfileInfo>(parsedDict["p.info"].ToString());//.ParseJsonTo<ProfileData>(Array.Empty<JsonConverter>());
+						Logger.LogInfo("DataReceivedClient_PlayerBotSpawn:: Converted Profile data:: Hello " + profile.Info.Nickname);
 					}
 					if (parsedDict.ContainsKey("p.cust"))
 					{
@@ -265,13 +336,18 @@ namespace SIT.Coop.Core.LocalGame
 								, "Customization"
 								, Activator.CreateInstance(PatchConstants.TypeDictionary["Profile.Customization"], parsedCust)
 								);
+							Logger.LogInfo("DataReceivedClient_PlayerBotSpawn:: Set Profile Customization for " + profile.Info.Nickname);
+
 						}
 					}
 					if (parsedDict.ContainsKey("p.equip"))
 					{
 						var pEquip = parsedDict["p.equip"].ToString();
-						var equipment = parsedDict["p.equip"].ToString().ParseJsonTo<PlayerEquipment>(Array.Empty<JsonConverter>());
+						//var equipment = parsedDict["p.equip"].ToString().ParseJsonTo<Equipment>(Array.Empty<JsonConverter>());
+						var equipment = PatchConstants.SITParseJson<Equipment>(parsedDict["p.equip"].ToString());//.ParseJsonTo<Equipment>(Array.Empty<JsonConverter>());
 						profile.Inventory.Equipment = equipment;
+						Logger.LogInfo("DataReceivedClient_PlayerBotSpawn:: Set Equipment for " + profile.Info.Nickname);
+
 					}
 					if (parsedDict.ContainsKey("isHost"))
 					{
@@ -293,8 +369,8 @@ namespace SIT.Coop.Core.LocalGame
 		{
 			try
 			{
-				EFT.Player.EUpdateMode armsUpdateMode = EFT.Player.EUpdateMode.Auto;
-				EFT.Player.EUpdateMode bodyUpdateMode = EFT.Player.EUpdateMode.Auto;
+				EUpdateMode armsUpdateMode = EUpdateMode.Auto;
+				EUpdateMode bodyUpdateMode = EUpdateMode.Auto;
 				//var updateQueue = PatchConstants.GetFieldOrPropertyFromInstance<EUpdateQueue>(LocalGamePatches.LocalGameInstance, "UpdateQueue", false);
 
 				//if (!base.Status.IsRunned())
@@ -338,6 +414,8 @@ namespace SIT.Coop.Core.LocalGame
 
 				profile.SetSpawnedInSession(true);
 
+				QuickLog("CreatePhysicalOtherPlayerOrBot: Attempting to Create Player " + profile.Info.Nickname);
+
 				var localPlayer = await EFT.LocalPlayer.Create(
 						playerId
 						, position
@@ -353,8 +431,8 @@ namespace SIT.Coop.Core.LocalGame
 						, PatchConstants.CharacterControllerSettings.ClientPlayerMode
 						, () => 1f
 						, () => 1f
-						, (GStatisticsSession2)Activator.CreateInstance(PatchConstants.TypeDictionary["StatisticsSession"])
-						, GFilterCustomization0.Default
+						, (IGStatisticsSession2)Activator.CreateInstance(PatchConstants.TypeDictionary["StatisticsSession"])
+						, GFilterCustomization1.Default
 						, null
 						, false
 					);
@@ -367,7 +445,6 @@ namespace SIT.Coop.Core.LocalGame
 				QuickLog(ex.ToString());
 			}
 
-			//return localPlayer;
 			return null;
 		}
 
@@ -444,21 +521,30 @@ namespace SIT.Coop.Core.LocalGame
 				{
 					case ESpawnState.NotLoaded:
 						newPlayerToSpawn.Item3 = ESpawnState.Loading;
-						//this.QuickLog("Update::Loading a new Player " + newPlayerToSpawn.Item1.AccountId);
-						IEnumerable<ResourceKey> allPrefabPaths = newPlayerToSpawn.Item1.GetAllPrefabPaths();
+						PlayersToSpawn[accountId] = newPlayerToSpawn;
+
+						this.QuickLog("Update::Loading a new Player " + newPlayerToSpawn.Item1.Nickname);
+                        IEnumerable<ResourceKey> allPrefabPaths = newPlayerToSpawn.Item1.GetAllPrefabPaths(false);
 						if (allPrefabPaths.Count() > 0)
                         {
-							Singleton<JobScheduler>.Instance.SetForceMode(enable: true);
-							await Singleton<PoolManager>
+                            Singleton<JobScheduler>.Instance.SetForceMode(enable: true);
+							Task loadBundle = Singleton<PoolManager>
 								.Instance
 								.LoadBundlesAndCreatePools(
-								PoolManager.PoolsCategory.Raid, PoolManager.AssemblyType.Local, allPrefabPaths.ToArray(), GJobYield.General, new GProgress<SProgress>(delegate (SProgress p)
-							//.LoadBundlesAndCreatePools(PoolManager.PoolsCategory.Raid, PoolManager.AssemblyType.Local, allPrefabPaths.ToArray(), GClass2637.General, new GClass2558<GStruct94>(delegate (GStruct94 p)
+								PoolManager.PoolsCategory.Raid
+								, PoolManager.AssemblyType.Local
+								, allPrefabPaths.ToArray()
+								, GJobYield.General
+								, new GProgress<SProgress>(delegate (SProgress p)
 							{
-								//this.QuickLog($"Update::Loading a new Player {newPlayerToSpawn.Item1.AccountId}:{p.Stage}:{p.Progress}");
-							})).ContinueWith((Task t) => {
-								newPlayerToSpawn.Item3 = ESpawnState.Loaded;
-							});
+								//this.QuickLog($"Update::Loading a new Player {newPlayerToSpawn.Item1.Nickname}:{p.Stage}:{p.Progress}");
+							}));
+							await loadBundle;
+							newPlayerToSpawn.Item3 = ESpawnState.Loaded;
+							//.ContinueWith((Task t) =>
+							//{
+							//	newPlayerToSpawn.Item3 = ESpawnState.Loaded;
+							//});
 						}
 						else
 						{
@@ -475,11 +561,11 @@ namespace SIT.Coop.Core.LocalGame
 						Vector3 spawnPosition = newPlayerToSpawn.Item2;
 						try
 						{
-							var result = await this.CreatePhysicalOtherPlayerOrBot(newPlayerToSpawn.Item1, spawnPosition);
+							var result = this.CreatePhysicalOtherPlayerOrBot(newPlayerToSpawn.Item1, spawnPosition).Result;
 							if (result != null)
 							{
 								newPlayerToSpawn.Item3 = ESpawnState.Spawned;
-								this.SetWeaponInHandsOfNewPlayer(result);
+								//this.SetWeaponInHandsOfNewPlayer(result);
 
 								if (Players.TryAdd(newPlayerToSpawn.Item1.AccountId, result))
 								{
@@ -521,15 +607,27 @@ namespace SIT.Coop.Core.LocalGame
 
 		private void SetWeaponInHandsOfNewPlayer(LocalPlayer person)
 		{
-			PlayerEquipment equipment = person.Profile.Inventory.Equipment;
+			Equipment equipment = person.Profile.Inventory.Equipment;
 			if (equipment == null)
 			{
 				return;
 			}
-			Item item = equipment.GetSlot(EquipmentSlot.FirstPrimaryWeapon).ContainedItem
-				?? equipment.GetSlot(EquipmentSlot.SecondPrimaryWeapon).ContainedItem
-				?? equipment.GetSlot(EquipmentSlot.Holster).ContainedItem
-				?? equipment.GetSlot(EquipmentSlot.Scabbard).ContainedItem;
+			Item item = equipment.GetSlot(EquipmentSlot.FirstPrimaryWeapon).ContainedItem;
+			if (item == null)
+			{
+				this.QuickLog("SetWeaponInHandsOfNewPlayer:FirstPrimaryWeapon is NULL");
+				item = equipment.GetSlot(EquipmentSlot.SecondPrimaryWeapon).ContainedItem;
+			}
+			if (item == null)
+			{
+				this.QuickLog("SetWeaponInHandsOfNewPlayer:SecondPrimaryWeapon is NULL");
+				item = equipment.GetSlot(EquipmentSlot.Holster).ContainedItem;
+			}
+			if (item == null)
+			{
+				this.QuickLog("SetWeaponInHandsOfNewPlayer:Holster is NULL");
+				item = equipment.GetSlot(EquipmentSlot.Scabbard).ContainedItem;
+			}
 			if (item == null)
 			{
 				return;
@@ -539,37 +637,13 @@ namespace SIT.Coop.Core.LocalGame
 			SetItemInHandsOfPlayer(person, item);
 		}
 
-		private void SetItemInHandsOfPlayer(LocalPlayer person, Item item)
+		public static void SetItemInHandsOfPlayer(LocalPlayer person, Item item)
 		{
 			person.SetItemInHands(item, null);
 		}
 
 
-		void FixedUpdate()
-		{
-			if (!doingClientSpawnPlayersWork)
-			{
-				doingClientSpawnPlayersWork = true;
-				UpdateClientSpawnPlayers();
-				doingClientSpawnPlayersWork = false;
-			}
-		}
-
-		bool doingclientwork = false;
-		bool doingClientSpawnPlayersWork = false;
-
-		void Update()
-		{
-			if (!doingclientwork)
-			{
-				doingclientwork = true;
-				//UpdateParityCheck();
-				//UpdateAddPlayersToAICalc();
-				RunQueuedActions();
-
-                doingclientwork = false;
-			}
-		}
+		
 
 		void UpdateAddPlayersToAICalc()
         {

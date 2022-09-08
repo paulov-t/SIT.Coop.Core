@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using EFT;
+using Comfort.Common;
 
 namespace SIT.Coop.Core.Player
 {
@@ -39,7 +40,24 @@ namespace SIT.Coop.Core.Player
 
         internal static void SetItemInHandsReplicated(LocalPlayer player, Dictionary<string, object> packet)
         {
-            //PatchConstants.Logger.LogInfo("SetItemInHands");
+
+            var item = player.Profile.Inventory.GetAllItemByTemplate(packet["item.tpl"].ToString()).FirstOrDefault();
+            if(item != null)
+            {
+                PatchConstants.Logger.LogInfo($"SetItemInHandsReplicated: Attempting to set item of tpl {packet["item.tpl"].ToString()}");
+                //player.TryProceed(item, delegate(Result<IHandsController> result) { 
+                
+                //    if(result.Succeed)
+                //        PatchConstants.Logger.LogInfo($"SetItemInHandsReplicated: Result:Succeed");
+                //    else if (result.Failed)
+                //        PatchConstants.Logger.LogInfo($"SetItemInHandsReplicated: Result:Failed");
+
+                //});
+            }
+            else
+            {
+                PatchConstants.Logger.LogError($"SetItemInHandsReplicated: Could not find item of tpl {packet["item.tpl"].ToString()}");
+            }
 
         }
     }

@@ -31,12 +31,15 @@ namespace SIT.Coop.Core.Player
         [PatchPostfix]
         public static void Patch(EFT.Player __instance, EFT.InventoryLogic.Weapon weapon)
         {
-            Dictionary<string, object> dictionary = new Dictionary<string, object>();
-            //dictionary.Add("item.id", weapon.Id);
-            //dictionary.Add("item.tpl", weapon.TemplateId);
-            dictionary.Add("weapon", weapon.SITToJson());
-            dictionary.Add("m", "SetInHands.Weapon");
-            ServerCommunication.PostLocalPlayerData(__instance, dictionary);
+            if (__instance != null && weapon != null)
+            {
+                Dictionary<string, object> dictionary = new Dictionary<string, object>();
+                //dictionary.Add("item.id", weapon.Id);
+                //dictionary.Add("item.tpl", weapon.TemplateId);
+                dictionary.Add("weapon", weapon.TemplateId);
+                dictionary.Add("m", "SetInHands.Weapon");
+                ServerCommunication.PostLocalPlayerData(__instance, dictionary);
+            }
         }
 
         internal static void SetInHandsReplicated(LocalPlayer player, Dictionary<string, object> packet)

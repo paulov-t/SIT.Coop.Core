@@ -87,52 +87,52 @@ namespace SIT.Coop.Core.LocalGame
                 prc.IsMyPlayer = true;
 
 
-                Dictionary<string, object> dictionary2 = new Dictionary<string, object>
-                    {
-                        {
-                            "SERVER",
-                            "SERVER"
-                        },
-                        {
-                            "accountId",
-                            p.Profile.AccountId
-                        },
-                        {
-                            "profileId",
-                            p.ProfileId
-                        },
-                        {
-                            "groupId",
-                            Matchmaker.MatchmakerAcceptPatches.GetGroupId()
-                        },
-                        {
-                            "sPx",
-                            position.x
-                        },
-                        {
-                            "sPy",
-                            position.y
-                        },
-                        {
-                            "sPz",
-                            position.z
-                        },
-                        { "m", "PlayerSpawn" },
-                        {
-                            "p.info",
-                            p.Profile.Info.SITToJson()
-                        },
-                        {
-                            "p.cust",
-                             p.Profile.Customization.SITToJson()
-                        },
-                        {
-                            "p.equip",
-                            p.Profile.Inventory.Equipment.CloneItem().ToJson()
-                        }
-                    };
-                //new Request().PostJson("/client/match/group/server/players/spawn", dictionary2.ToJson());
-                ServerCommunication.PostLocalPlayerData(p, dictionary2);
+                //Dictionary<string, object> dictionary2 = new Dictionary<string, object>
+                //    {
+                //        {
+                //            "SERVER",
+                //            "SERVER"
+                //        },
+                //        {
+                //            "accountId",
+                //            p.Profile.AccountId
+                //        },
+                //        {
+                //            "profileId",
+                //            p.ProfileId
+                //        },
+                //        {
+                //            "groupId",
+                //            Matchmaker.MatchmakerAcceptPatches.GetGroupId()
+                //        },
+                //        {
+                //            "sPx",
+                //            position.x
+                //        },
+                //        {
+                //            "sPy",
+                //            position.y
+                //        },
+                //        {
+                //            "sPz",
+                //            position.z
+                //        },
+                //        { "m", "PlayerSpawn" },
+                //        {
+                //            "p.info",
+                //            JsonConvert.SerializeObject(p.Profile.Info)//.SITToJson()
+                //        },
+                //        {
+                //            "p.cust",
+                //             p.Profile.Customization.SITToJson()
+                //        },
+                //        {
+                //            "p.equip",
+                //            p.Profile.Inventory.Equipment.ToJson()
+                //        }
+                //    };
+                ////new Request().PostJson("/client/match/group/server/players/spawn", dictionary2.ToJson());
+                //ServerCommunication.PostLocalPlayerData(p, dictionary2);
 
                 if (Matchmaker.MatchmakerAcceptPatches.IsServer)
                 {
@@ -160,7 +160,7 @@ namespace SIT.Coop.Core.LocalGame
                         }
                     };
                     Logger.LogInfo("Setting Spawn Point to " + position);
-                    new Request().PostJson("/client/match/group/server/setPlayersSpawnPoint", JsonConvert.SerializeObject(value2));
+                    new SIT.Tarkov.Core.Request().PostJson("/client/match/group/server/setPlayersSpawnPoint", JsonConvert.SerializeObject(value2));
                     ServerCommunication.SendDataDownWebSocket(value2);
 
                 }
@@ -180,7 +180,7 @@ namespace SIT.Coop.Core.LocalGame
                                     "groupId",
                                     MatchmakerAcceptPatches.GetGroupId()
                                 } };
-                            string value4 = new Request().PostJson("/client/match/group/server/getPlayersSpawnPoint", JsonConvert.SerializeObject(value3));
+                            string value4 = new SIT.Tarkov.Core.Request().PostJson("/client/match/group/server/getPlayersSpawnPoint", JsonConvert.SerializeObject(value3));
                             if (!string.IsNullOrEmpty(value4))
                             {
                                 System.Random r = new System.Random();
@@ -210,7 +210,7 @@ namespace SIT.Coop.Core.LocalGame
                     }
                     if(spawnPointPosition != Vector3.zero)
                     {
-                        p.Teleport(spawnPointPosition, true);
+                        //p.Teleport(spawnPointPosition, true);
                     }
                 }
                     //gameWorld.GetType().DontDestroyOnLoad(coopGameComponent);

@@ -1,4 +1,6 @@
-﻿using EFT.Interactive;
+﻿#pragma warning disable CS0618 // Type or member is obsolete
+using EFT.Interactive;
+using SIT.Coop.Core.LocalGame;
 using SIT.Coop.Core.Player.Weapon;
 using SIT.Coop.Core.Web;
 using SIT.Tarkov.Core;
@@ -9,10 +11,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Networking;
+using UnityEngine.Networking.Match;
 
 namespace SIT.Coop.Core.Player
 {
-    internal class PlayerReplicatedComponent : MonoBehaviour
+    internal class PlayerReplicatedComponent : NetworkBehaviour
     {
         internal const int PacketTimeoutInSeconds = 1;
         internal ConcurrentQueue<Dictionary<string, object>> QueuedPackets { get; }
@@ -30,6 +34,11 @@ namespace SIT.Coop.Core.Player
         public Vector2 LastMovementDirection { get; private set; } = Vector2.zero;
         public bool IsMyPlayer { get; internal set; }
 
+        private NetworkConnection _connection { get; } = new NetworkConnection();
+        private System.Random RandomConnectionIds { get; } = new System.Random();
+
+        private NetworkClient _client { get; set; }
+
         void Awake()
         {
             //PatchConstants.Logger.LogInfo("PlayerReplicatedComponent:Awake");
@@ -39,6 +48,27 @@ namespace SIT.Coop.Core.Player
         {
             //PatchConstants.Logger.LogInfo("PlayerReplicatedComponent:Start");
 
+            //_connection.Initialize("0.0.0.0", 1, 1, new HostTopology());
+
+            //_connection.Initialize("127.0.0.1", 1, RandomConnectionIds.Next(63333), new HostTopology(CoopGameComponent.GetConnectionConfig(), 99));
+
+            //_client = NetworkManager.singleton.StartClient(CoopGameComponent.GetMatchInfo());
+            //_client.RegisterHandler(999, (NetworkMessage message) => {
+
+            //    PatchConstants.Logger.LogInfo("Client Received 999 Message");
+
+            //});
+            ////_client.Connect("127.0.0.1", 5000);
+            //_client.Connect(CoopGameComponent.GetMatchInfo());
+            //if (_client.isConnected)
+            //{
+            //    _client.Send(999, null);
+            //}
+            //else
+            //{
+            //    //PatchConstants.Logger.LogInfo("NetworkClient is not connected!!");
+            //}
+
             if (this.listOfInteractiveObjects == null)
             {
                 this.listOfInteractiveObjects = FindObjectsOfType<WorldInteractiveObject>();
@@ -47,6 +77,9 @@ namespace SIT.Coop.Core.Player
 
 
         private WorldInteractiveObject[] listOfInteractiveObjects;
+
+        private Vector3 ReceivedPacketPostion = Vector3.zero;
+        private Vector2 ReceivedPacketRotation = Vector2.zero;
 
 
         void FixedUpdate()
@@ -61,10 +94,10 @@ namespace SIT.Coop.Core.Player
             if (player == null)
                 return;
 
-            if (this.listOfInteractiveObjects == null)
-            {
-                this.listOfInteractiveObjects = FindObjectsOfType<WorldInteractiveObject>();
-            }
+            //if (this.listOfInteractiveObjects == null)
+            //{
+            //    this.listOfInteractiveObjects = FindObjectsOfType<WorldInteractiveObject>();
+            //}
 
             UpdateMovement();
 
@@ -107,34 +140,33 @@ namespace SIT.Coop.Core.Player
                                 LastMovementPacket = packet;
                             break;
                         case "Position":
-                            Vector3 newPos = Vector3.zero;
-                            newPos.x = float.Parse(packet["x"].ToString());
-                            newPos.y = float.Parse(packet["y"].ToString());
-                            newPos.z = float.Parse(packet["z"].ToString());
-                            if (Vector3.Distance(newPos, player.Position) > 2f)
+                            if (!IsMyPlayer)
                             {
-                                player.Transform.position = newPos;
+                                Vector3 newPos = Vector3.zero;
+                                newPos.x = float.Parse(packet["x"].ToString());
+                                newPos.y = float.Parse(packet["y"].ToString());
+                                newPos.z = float.Parse(packet["z"].ToString());
+                                ReceivedPacketPostion = newPos;
                             }
                             break;
                         case "Rotation":
                             if(!IsMyPlayer)
                             {
-                                Vector2 newRot = Vector2.zero;
-                                newRot.x = float.Parse(packet["rX"].ToString());
-                                newRot.y = float.Parse(packet["rY"].ToString());
-                                PatchConstants.SetFieldOrPropertyFromInstance<Vector2>(player, "Rotation", newRot);
+                                var rotationX = float.Parse(packet["rX"].ToString());
+                                var rotationY = float.Parse(packet["rY"].ToString());
+                                ReceivedPacketRotation = new Vector2(rotationX, rotationY);
                             }
                             break;
-                        case "RotateBatch":
-                            var rotationBatch = Json.Deserialize<List<Vector2>>(Json.Serialize(packet["batch"]));
-                            foreach (var r in rotationBatch) 
-                            {
-                                if (r.IsZero() || r.SqrMagnitude() < 0.1f)
-                                    continue;
+                        //case "RotateBatch":
+                        //    var rotationBatch = Json.Deserialize<List<Vector2>>(Json.Serialize(packet["batch"]));
+                        //    foreach (var r in rotationBatch) 
+                        //    {
+                        //        if (r.IsZero() || r.SqrMagnitude() < 0.1f)
+                        //            continue;
 
-                                ReceivedRotationPackets.Enqueue(r);
-                            }
-                            break;
+                        //        ReceivedRotationPackets.Enqueue(r);
+                        //    }
+                        //    break;
                         //case "Rotate":
                         //    //PatchConstants.Logger.LogInfo("Rotate");
                         //    PlayerOnRotatePatch.RotateReplicated(player, packet);
@@ -225,23 +257,21 @@ namespace SIT.Coop.Core.Player
 
                     if (!LastRotation.HasValue)
                         LastRotation = player.MovementContext.TransformRotation;
-                    //var rotationDist = Vector2.Distance(player.Rotation, LastRotation);
-                    //var rotationDot = Vector2.Dot(player.Rotation, LastRotation);
+
                     var rotationAngle = Quaternion.Angle(player.MovementContext.TransformRotation, LastRotation.Value);
 
-                    if (player.MovementContext.TransformRotation != this.LastRotation && rotationAngle > 16)
+                    if (player.MovementContext.TransformRotation != this.LastRotation && rotationAngle > 15)
                     {
                         this.LastRotation = player.MovementContext.TransformRotation;
                         Dictionary<string, object> dictionary = new Dictionary<string, object>();
-                        dictionary.Add("rX", player.Rotation.x);
-                        dictionary.Add("rY", player.Rotation.y);
+                        dictionary.Add("rX", player.MovementContext.Rotation.x);
+                        dictionary.Add("rY", player.MovementContext.Rotation.y);
                         dictionary.Add("m", "Rotation");
                         ServerCommunication.PostLocalPlayerData(player, dictionary);
                     }
 
-                    if(!LastSentPosition.HasValue || Vector3.Distance(LastSentPosition.Value, player.Position) > 2f)
+                    if(!LastSentPosition.HasValue || Vector3.Distance(LastSentPosition.Value, player.Position) > 0.9f)
                     {
-                        this.LastRotation = player.MovementContext.TransformRotation;
                         Dictionary<string, object> dictionary = new Dictionary<string, object>();
                         dictionary.Add("x", player.Position.x);
                         dictionary.Add("y", player.Position.y);
@@ -254,18 +284,21 @@ namespace SIT.Coop.Core.Player
                 }
             }
 
+            if (!IsMyPlayer)
+            {
+                if (Vector3.Distance(player.Transform.position, ReceivedPacketPostion) < 2f)
+                    player.Transform.position = Vector3.Lerp(player.Transform.position, ReceivedPacketPostion, 2f * Time.deltaTime);
+                else
+                    player.Transform.position = ReceivedPacketPostion;
+
+                //player.MovementContext.MovementDirection
+
+                player.MovementContext.Rotation = Vector2.Lerp(player.MovementContext.Rotation, ReceivedPacketRotation, 2f * Time.deltaTime);
+            }
 
             if (LastMovementPacket == null)
                 return;
 
-            //if (LastRotationPacket == null)
-            //    return;
-
-            //if (LastMovementPacket.ContainsKey("t") && long.Parse(LastMovementPacket["t"].ToString()) < DateTime.Now.AddSeconds(-10).Ticks)
-            //{
-            //    LastMovementPacket = null;
-            //    return;
-            //}
 
             PlayerOnMovePatch.MoveReplicated(player, LastMovementPacket);
 

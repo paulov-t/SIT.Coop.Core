@@ -87,22 +87,22 @@ namespace SIT.Coop.Core.Web
 			//	}
 			//}
 			dataDict.Clear();
-			var returnedIpPort = new Request().PostJson("/coop/getCoopIpAndPort", data: dataDict.ToJson());
-			if (!string.IsNullOrEmpty(returnedIpPort))
-			{
-				var returnedIpPortDictionary = JsonConvert.DeserializeObject<Dictionary<string, string>>(returnedIpPort);
-				if(returnedIpPortDictionary != null)
-                {
-					if(returnedIpPortDictionary.ContainsKey("ip"))
-                    {
-						backendUrlIp = returnedIpPortDictionary["ip"];
-                    }
-					if (returnedIpPortDictionary.ContainsKey("port"))
-                    {
-						udpServerPort = int.Parse(returnedIpPortDictionary["port"]);
-                    }
-                }
-			}
+			var returnedIpPort = new SIT.Tarkov.Core.Request().PostJson("/coop/getCoopIpAndPort", data: dataDict.ToJson());
+			//if (!string.IsNullOrEmpty(returnedIpPort))
+			//{
+			//	var returnedIpPortDictionary = JsonConvert.DeserializeObject<Dictionary<string, string>>(returnedIpPort);
+			//	if(returnedIpPortDictionary != null)
+   //             {
+			//		if(returnedIpPortDictionary.ContainsKey("ip"))
+   //                 {
+			//			backendUrlIp = returnedIpPortDictionary["ip"];
+   //                 }
+			//		if (returnedIpPortDictionary.ContainsKey("port") && int.TryParse(returnedIpPortDictionary["port"], out int port))
+   //                 {
+			//			udpServerPort = port;
+   //                 }
+   //             }
+			//}
 
 			PatchConstants.Logger.LogInfo("GetUdpClient::Game Server IP is " + backendUrlIp);
 
@@ -210,6 +210,14 @@ namespace SIT.Coop.Core.Web
 		}
 		static bool lockedWS = false;
 		static object lockedWSObject = new object();
+
+		public static async Task SendDataDownWebSocketCSV(string method, string dataCSV)
+		{
+			StringBuilder stringBuilder = new StringBuilder();
+			stringBuilder.Append("m=").Append(method);
+			stringBuilder.Append(";").Append(dataCSV);
+			await SendDataDownWebSocket(stringBuilder.ToString(), false);
+		}
 
 		public static async Task SendDataDownWebSocket(object data, bool reliable = false)
 		{

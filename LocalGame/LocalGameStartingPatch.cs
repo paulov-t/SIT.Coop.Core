@@ -28,12 +28,12 @@ namespace SIT.Coop.Core.LocalGame
         //public static EchoGameServer gameServer;
         private static ConfigFile _config;
 
-        private static LocalGameSpawnAICoroutinePatch gameSpawnAICoroutinePatch;
+        //private static LocalGameSpawnAICoroutinePatch gameSpawnAICoroutinePatch;
 
         public LocalGameStartingPatch(ConfigFile config)
         {
             _config = config;
-            gameSpawnAICoroutinePatch = new SIT.Coop.Core.LocalGame.LocalGameSpawnAICoroutinePatch(_config);
+            //gameSpawnAICoroutinePatch = new SIT.Coop.Core.LocalGame.LocalGameSpawnAICoroutinePatch(_config);
         }
 
         protected override MethodBase GetTargetMethod()
@@ -72,19 +72,17 @@ namespace SIT.Coop.Core.LocalGame
 
         [PatchPrefix]
         public static async void PatchPrefix(
-            object __instance
+            BaseLocalGame<GamePlayerOwner> __instance
             , Task __result
             )
         {
 
             Logger.LogInfo($"LocalGameStartingPatch:PatchPrefix");
             LocalGamePatches.LocalGameInstance = __instance;
-            //new LocalGameStartBotSystemPatch().Enable();
 
-
-
-            //new SIT.Coop.Core.LocalGame.LocalGameSpawnAICoroutinePatch(_config).Enable();
-            gameSpawnAICoroutinePatch.Enable();
+            new LocalGameSpawnAICoroutinePatch(_config, __instance).Enable();
+            new WaveSpawnScenarioPatch(_config).Enable();
+            new NonWaveSpawnScenarioPatch(_config).Enable();
             new LocalGameBotWaveSystemPatch().Enable();
 
             await StartAndConnectToServer(__instance);
@@ -142,7 +140,7 @@ namespace SIT.Coop.Core.LocalGame
                     //string myExternalAddress = ServerCommunication.GetMyExternalAddress();
 
                     // ------ As Host, Notify Central Server --------
-                    await new Request().PostJsonAsync("/client/match/group/server/start", JsonConvert.SerializeObject(""));
+                    await new SIT.Tarkov.Core.Request().PostJsonAsync("/client/match/group/server/start", JsonConvert.SerializeObject(""));
                     //await ServerCommunication.SendDataDownWebSocket("Start=" + PatchConstants.GetPHPSESSID());
                     await Task.Delay(500);
                 }
@@ -150,7 +148,7 @@ namespace SIT.Coop.Core.LocalGame
                 {
                     //Logger.LogInfo("LocalGameStartingPatch.StartAndConnectToServer : Joining Server");
 
-                    await new Request().PostJsonAsync("/client/match/group/server/join", JsonConvert.SerializeObject(MatchmakerAcceptPatches.GetGroupId()));
+                    await new SIT.Tarkov.Core.Request().PostJsonAsync("/client/match/group/server/join", JsonConvert.SerializeObject(MatchmakerAcceptPatches.GetGroupId()));
                     await Task.Delay(500);
                 }
             }
