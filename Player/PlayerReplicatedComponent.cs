@@ -123,6 +123,10 @@ namespace SIT.Coop.Core.Player
 
                     switch (method)
                     {
+                        case "HostDied":
+                            PatchConstants.Logger.LogInfo("Host Died");
+                            LocalGameEndingPatch.EndSession(LocalGamePatches.LocalGameInstance, LocalGamePatches.MyPlayerProfile.Id, EFT.ExitStatus.Survived, "", 0);
+                            break;
                         case "Damage":
                             //PatchConstants.Logger.LogInfo("Damage");
                             PlayerOnDamagePatch.DamageReplicated(player, packet);

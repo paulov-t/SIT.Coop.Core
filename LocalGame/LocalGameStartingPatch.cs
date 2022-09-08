@@ -53,19 +53,6 @@ namespace SIT.Coop.Core.LocalGame
                 && x.GetParameters().Any(x => x.Name.Contains("runCallback"))
                 );
 
-            //foreach(var m in PatchConstants.GetAllMethodsForType(t))
-            //{
-            //    Logger.LogInfo($"LocalGameStartingPatch:{m.Name}");
-            //}
-            // int playerId, Vector3 position, Quaternion rotation, string layerName, 
-            //var method = PatchConstants.GetAllMethodsForType(t)
-            //    .FirstOrDefault(x => x.GetParameters().Length >= 4
-            //    && x.GetParameters()[0].Name.Contains("playerId")
-            //    && x.GetParameters()[1].Name.Contains("position")
-            //    && x.GetParameters()[2].Name.Contains("rotation")
-            //    && x.GetParameters()[3].Name.Contains("layerName")
-            //    );
-
             Logger.LogInfo($"LocalGameStartingPatch:{t.Name}:{method.Name}");
             return method;
         }
@@ -90,7 +77,7 @@ namespace SIT.Coop.Core.LocalGame
 
         [PatchPostfix]
         public static async void PatchPostfix(
-            object __instance
+            BaseLocalGame<GamePlayerOwner> __instance
             , Task __result
             )
         {

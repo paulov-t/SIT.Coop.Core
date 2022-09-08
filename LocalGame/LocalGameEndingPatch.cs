@@ -62,63 +62,74 @@ namespace SIT.Coop.Core.LocalGame
         {
             if (Matchmaker.MatchmakerAcceptPatches.IsClient)
             {
-                if (profileId != __instance.Profile_0.Id || __instance.Status == GameStatus.Stopped || __instance.Status == GameStatus.Stopping)
-                {
-                    return;
-                }
-                var gameStatus = PatchConstants.GetFieldOrPropertyFromInstance
-                                       <GameStatus>(__instance, "Status", false);
-                if (__instance.Status == GameStatus.Starting || __instance.Status == GameStatus.Started)
-                {
-                    //__instance.endByTimerScenario_0.GameStatus_0 = GameStatus.SoftStopping;
-                    var endByTimerScenario_0 = PatchConstants.GetFieldOrPropertyFromInstance
-                                    <EndByTimerScenario>(__instance, "endByTimerScenario_0", false);
-                    if (endByTimerScenario_0 != null)
-                    {
-                        var endByTimerScenarioGameStatus = PatchConstants.GetFieldOrPropertyFromInstance
-                                        <GameStatus>(endByTimerScenario_0, "GameStatus_0", false);
-                        endByTimerScenarioGameStatus = GameStatus.SoftStopping;
-                    }
-
-                }
-                gameStatus = GameStatus.Stopping;
-                //__instance.Status = GameStatus.Stopping;
-                __instance.GameTimer.TryStop();
-                //__instance.endByExitTrigerScenario_0.Stop();
-                //__instance.gameUI_0.TimerPanel.Close();
-                if (EnvironmentManager.Instance != null)
-                {
-                    EnvironmentManager.Instance.Stop();
-                }
-                MonoBehaviourSingleton<PreloaderUI>.Instance.StartBlackScreenShow(1f, 1f, delegate
-                {
-                    if (GClass2482.CheckCurrentScreen(EScreenType.Reconnect))
-                    {
-                        GClass2482.CloseAllScreensForced();
-                    }
-                    //__instance.gparam_0.Player.OnGameSessionEnd(exitStatus, __instance.PastTime, __instance.GClass1113_0.Id, exitName);
-                    LocalGamePatches.MyPlayer.OnGameSessionEnd(exitStatus, __instance.PastTime, __instance.LocationObjectId, exitName);
-                    __instance.CleanUp();
-                    //__instance.Status = GameStatus.Stopped;
-                    gameStatus = GameStatus.Stopped;
-                    PatchConstants.SetFieldOrPropertyFromInstance(__instance, "GameStatus", gameStatus);
-
-                    //TimeSpan timeSpan = GClass1150.Now - this.dateTime_0;
-                    //__instance.ginterface120_0.OfflineRaidEnded(exitStatus, exitName, timeSpan.TotalSeconds).HandleExceptions();
-                    PatchConstants.BackEndSession.OfflineRaidEnded(exitStatus, exitName, 0);
-                    StaticManager.Instance.WaitSeconds(delay, delegate
-                    {
-                        //__instance.callback_0(new Result<ExitStatus, TimeSpan, Metrics>(exitStatus, GClass1150.Now - this.dateTime_0, new Metrics()));
-                        var callback_0 = PatchConstants.GetFieldOrPropertyFromInstance
-                                    <Callback<ExitStatus, TimeSpan, Metrics>>(__instance, "callback_0", false);
-                        if(callback_0 != null)
-                        {
-                            callback_0(new Result<ExitStatus, TimeSpan, Metrics>(exitStatus, new TimeSpan(), new Metrics()));
-                        }
-                        UIEventSystem.Instance.Enable();
-                    });
-                });
+                EndSession(__instance, profileId, exitStatus, exitName, delay);
             }
+        }
+
+        public static void EndSession(
+            BaseLocalGame<GamePlayerOwner> game
+            , string profileId
+            , ExitStatus exitStatus
+            , string exitName
+            , float delay)
+        {
+            if (profileId != game.Profile_0.Id || game.Status == GameStatus.Stopped || game.Status == GameStatus.Stopping)
+            {
+                Logger.LogInfo("EndSession: Unable to End the Session!");
+                return;
+            }
+            var gameStatus = PatchConstants.GetFieldOrPropertyFromInstance
+                                   <GameStatus>(game, "Status", false);
+            if (game.Status == GameStatus.Starting || game.Status == GameStatus.Started)
+            {
+                //__instance.endByTimerScenario_0.GameStatus_0 = GameStatus.SoftStopping;
+                var endByTimerScenario_0 = PatchConstants.GetFieldOrPropertyFromInstance
+                                <EndByTimerScenario>(game, "endByTimerScenario_0", false);
+                if (endByTimerScenario_0 != null)
+                {
+                    var endByTimerScenarioGameStatus = PatchConstants.GetFieldOrPropertyFromInstance
+                                    <GameStatus>(endByTimerScenario_0, "GameStatus_0", false);
+                    endByTimerScenarioGameStatus = GameStatus.SoftStopping;
+                }
+
+            }
+            gameStatus = GameStatus.Stopping;
+            //__instance.Status = GameStatus.Stopping;
+            game.GameTimer.TryStop();
+            //__instance.endByExitTrigerScenario_0.Stop();
+            //__instance.gameUI_0.TimerPanel.Close();
+            if (EnvironmentManager.Instance != null)
+            {
+                EnvironmentManager.Instance.Stop();
+            }
+            MonoBehaviourSingleton<PreloaderUI>.Instance.StartBlackScreenShow(1f, 1f, delegate
+            {
+                if (GlobalScreenController.CheckCurrentScreen(EScreenType.Reconnect))
+                {
+                    GlobalScreenController.CloseAllScreensForced();
+                }
+                //__instance.gparam_0.Player.OnGameSessionEnd(exitStatus, __instance.PastTime, __instance.GClass1113_0.Id, exitName);
+                LocalGamePatches.MyPlayer.OnGameSessionEnd(exitStatus, game.PastTime, game.LocationObjectId, exitName);
+                game.CleanUp();
+                //__instance.Status = GameStatus.Stopped;
+                gameStatus = GameStatus.Stopped;
+                PatchConstants.SetFieldOrPropertyFromInstance(game, "GameStatus", gameStatus);
+
+                //TimeSpan timeSpan = GClass1150.Now - this.dateTime_0;
+                //__instance.ginterface120_0.OfflineRaidEnded(exitStatus, exitName, timeSpan.TotalSeconds).HandleExceptions();
+                PatchConstants.BackEndSession.OfflineRaidEnded(exitStatus, exitName, 0);
+                StaticManager.Instance.WaitSeconds(delay, delegate
+                {
+                    //__instance.callback_0(new Result<ExitStatus, TimeSpan, Metrics>(exitStatus, GClass1150.Now - this.dateTime_0, new Metrics()));
+                    var callback_0 = PatchConstants.GetFieldOrPropertyFromInstance
+                                <Callback<ExitStatus, TimeSpan, Metrics>>(game, "callback_0", false);
+                    if (callback_0 != null)
+                    {
+                        callback_0(new Result<ExitStatus, TimeSpan, Metrics>(exitStatus, new TimeSpan(), new Metrics()));
+                    }
+                    UIEventSystem.Instance.Enable();
+                });
+            });
         }
     }
 }

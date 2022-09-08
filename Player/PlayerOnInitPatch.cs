@@ -54,7 +54,7 @@ namespace SIT.Coop.Core.Player
                         },
                         {
                             "isAI",
-                            true
+                            player.IsAI
                         },
                         {
                             "accountId",
@@ -106,6 +106,7 @@ namespace SIT.Coop.Core.Player
 
             if(Matchmaker.MatchmakerAcceptPatches.IsServer)
                 PatchConstants.DisplayMessageNotification($"{__instance.Profile.Nickname}:{__instance.Side}:{__instance.Profile.Info.Settings.Role} has spawned");
+
 
                 //Logger.LogInfo($"BotCreationMethod. [SUCCESS] Adding AI {profile.AccountId} to CoopGameComponent.Players list");
         }

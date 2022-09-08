@@ -238,6 +238,15 @@ namespace SIT.Coop.Core.LocalGame
 									//Logger.LogInfo($"LocalGameStartingPatch:OnDataReceived:SERVER:{buffer.Length}");
 									QueuedPackets.Enqueue(dictionary);
 								}
+								else if(dictionary.ContainsKey("m"))
+                                {
+									if(dictionary["m"].ToString() == "HostDied")
+                                    {
+										Logger.LogInfo("Host Died");
+										if (MatchmakerAcceptPatches.IsClient)
+											LocalGameEndingPatch.EndSession(LocalGamePatches.LocalGameInstance, LocalGamePatches.MyPlayerProfile.Id, EFT.ExitStatus.Survived, "", 0);
+									}
+                                }
 							}
 						}
 					});
@@ -323,7 +332,7 @@ namespace SIT.Coop.Core.LocalGame
 						//}
 						Logger.LogInfo("DataReceivedClient_PlayerBotSpawn:: Converting Profile data");
 						//profile.Info = parsedDict["p.info"].ToString().ParseJsonTo<ProfileData>(Array.Empty<JsonConverter>());
-						profile.Info = PatchConstants.SITParseJson<ProfileInfo>(parsedDict["p.info"].ToString());//.ParseJsonTo<ProfileData>(Array.Empty<JsonConverter>());
+						profile.Info = JsonConvert.DeserializeObject<ProfileInfo>(parsedDict["p.info"].ToString());// PatchConstants.SITParseJson<ProfileInfo>(parsedDict["p.info"].ToString());//.ParseJsonTo<ProfileData>(Array.Empty<JsonConverter>());
 						Logger.LogInfo("DataReceivedClient_PlayerBotSpawn:: Converted Profile data:: Hello " + profile.Info.Nickname);
 					}
 					if (parsedDict.ContainsKey("p.cust"))
@@ -493,6 +502,13 @@ namespace SIT.Coop.Core.LocalGame
                                         Logger.LogInfo($"Ignoring call to Spawn player {accountId}. The player already exists in the game.");
                                     }
                                     break;
+								case "HostDied":
+									{
+										Logger.LogInfo("Host Died");
+										if(MatchmakerAcceptPatches.IsClient)
+											LocalGameEndingPatch.EndSession(LocalGamePatches.LocalGameInstance, LocalGamePatches.MyPlayerProfile.Id, EFT.ExitStatus.Survived, "", 0);
+									}
+									break;
 							}
 						}
                     }

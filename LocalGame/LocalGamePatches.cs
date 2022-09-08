@@ -26,7 +26,7 @@ namespace SIT.Coop.Core.LocalGame
 
 	public class LocalGamePatches
 	{
-		public static object LocalGameInstance { get; set; }
+		public static BaseLocalGame<GamePlayerOwner> LocalGameInstance { get; set; }
 
 		public static object InvokeLocalGameInstanceMethod(string methodName, params object[] p)
         {

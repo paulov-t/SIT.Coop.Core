@@ -282,13 +282,18 @@ namespace SIT.Coop.Core.Player
             if (activeHealthController == null)
                 return;
 
-            
             if(activeHealthController is PlayerHealthController)
             {
                 Logger.LogInfo("Attempting to Kill!");
                 ((PlayerHealthController)activeHealthController).Kill(damageType);
             }
 
+            if(activeHealthController.Player == LocalGame.LocalGamePatches.MyPlayer && Matchmaker.MatchmakerAcceptPatches.IsServer)
+            {
+                Dictionary<string, object> dict = new Dictionary<string, object>();
+                dict.Add("m", "HostDied");
+                ServerCommunication.PostLocalPlayerData(activeHealthController.Player, dict);
+            }
             //activeHealthController.Kill(damageType);
             //PatchConstants.GetMethodForType(activeHealthController.GetType(), "Kill").Invoke(activeHealthController, new object[] { damageType });
         }

@@ -124,18 +124,18 @@ namespace SIT.Coop.Core.LocalGame
 
                 // Wait for client to join 
                 // comment out to test general stuff
-                //if (Matchmaker.MatchmakerAcceptPatches.IsServer)
-                //{
-                //    if (CoopGameComponent.Players.Any())
-                //    {
-                //        var filteredPlayersOnlyCount = CoopGameComponent.Players.Count(x => !x.Value.IsAI);
-                //        while (filteredPlayersOnlyCount < Matchmaker.MatchmakerAcceptPatches.HostExpectedNumberOfPlayers)
-                //        {
-                //            filteredPlayersOnlyCount = CoopGameComponent.Players.Count(x => !x.Value.IsAI);
-                //            yield return new WaitForSeconds(1);
-                //        }
-                //    }
-                //}
+                if (Matchmaker.MatchmakerAcceptPatches.IsServer)
+                {
+                    if (CoopGameComponent.Players.Any())
+                    {
+                        var filteredPlayersOnlyCount = CoopGameComponent.Players.Count(x => !x.Value.IsAI);
+                        while (filteredPlayersOnlyCount < Matchmaker.MatchmakerAcceptPatches.HostExpectedNumberOfPlayers)
+                        {
+                            filteredPlayersOnlyCount = CoopGameComponent.Players.Count(x => !x.Value.IsAI);
+                            yield return new WaitForSeconds(1);
+                        }
+                    }
+                }
 
 
                 //Logger.LogInfo($"BotSystemHelpers.RoleLimitDifficultyType.Name_0:{BotSystemHelpers.RoleLimitDifficultyType.Name + "_0"}");
