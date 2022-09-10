@@ -28,43 +28,34 @@ namespace SIT.Coop.Core.Player.Weapon
             return method;
         }
 
-        //[PatchPrefix]
-        //public static bool PatchPrefix(
-        //    EFT.Player.ItemHandsController __instance,
-        //    bool pressed
-        //    )
-        //{
-        //    return Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer;
-        //}
-
-        private static Dictionary<string, DateTime> lastTriggerPressedPacketSent = new Dictionary<string, DateTime>();
-
-
-        [PatchPostfix]
-        public static void PatchPostfix(
-            //EFT.Player.ItemHandsController __instance,
+        [PatchPrefix]
+        public static bool PatchPrefix(
             EFT.Player.FirearmController __instance,
             bool pressed
             )
         {
-            if (Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer || BlockPressed)
+            return Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer;
+        }
+
+        private static Dictionary<string, float> lastTriggerPressedPacketSent = new Dictionary<string, float>();
+
+
+        [PatchPostfix]
+        public static void PatchPostfix(
+            EFT.Player.FirearmController __instance,
+            bool pressed
+            )
+        {
+            if (Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer)
                 return;
 
             var player = PatchConstants.GetAllFieldsForObject(__instance).First(x => x.Name == "_player").GetValue(__instance) as EFT.Player;
-            if (!lastTriggerPressedPacketSent.ContainsKey(player.Profile.AccountId) || lastTriggerPressedPacketSent[player.Profile.AccountId] < DateTime.Now.AddSeconds(-0.2))
-            {
-                Dictionary<string, object> dictionary = new Dictionary<string, object>();
-                dictionary.Add("pressed", pressed);
-                dictionary.Add("m", "SetTriggerPressed");
+            Dictionary<string, object> packet = new Dictionary<string, object>();
+            packet.Add("pressed", pressed);
+            packet.Add("m", "SetTriggerPressed");
 
-                ServerCommunication.PostLocalPlayerData(player, dictionary);
-
-                if (!lastTriggerPressedPacketSent.ContainsKey(player.Profile.AccountId))
-                    lastTriggerPressedPacketSent.Add(player.Profile.AccountId, DateTime.Now);
-                else
-                    lastTriggerPressedPacketSent[player.Profile.AccountId] = DateTime.Now;
-
-            }
+            var createdPacket = ServerCommunication.PostLocalPlayerData(player, packet);
+            Replicated(player, createdPacket);
         }
 
         public static EFT.Player.FirearmController GetFirearmController(EFT.Player player)
@@ -76,41 +67,52 @@ namespace SIT.Coop.Core.Player.Weapon
             return null;
         }
 
-        private static List<Dictionary<string, object>> ReceivedPackets = new List<Dictionary<string, object>>();
-        public static bool BlockPressed = false;
-
-        public static void WeaponOnTriggerPressedReplicated(EFT.Player player, Dictionary<string, object> packet)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="player"></param>
+        /// <param name="packet"></param>
+        public static void Replicated(EFT.Player player, Dictionary<string, object> packet)
         {
-            // I send packets, don't receive it
-            if (lastTriggerPressedPacketSent.ContainsKey(player.Profile.AccountId))
+            // get account id of the packet
+            var aid = packet["accountId"].ToString();
+
+            // get the packet timestamp
+            var t = float.Parse(packet["t"].ToString());
+
+            // add the aid to keys of sent packets
+            if (!lastTriggerPressedPacketSent.ContainsKey(aid))
+                lastTriggerPressedPacketSent.Add(aid, 0);
+
+            // if the timestamp of the new packet less than the last received then ignore
+            if (t < lastTriggerPressedPacketSent[aid])
                 return;
 
+            // set the last received packet for the aid
+            lastTriggerPressedPacketSent[aid] = t;
+
+            // must contain pressed key
             if (packet.ContainsKey("pressed"))
             {
                 var firearmController = GetFirearmController(player);
                 if (firearmController != null && bool.TryParse(packet["pressed"].ToString(), out var pressed))
                 {
-                    BlockPressed = true;
-                    firearmController.SetTriggerPressed(pressed);
-                    BlockPressed = false;
+                    // -------------------------------------
+                    // target what the following method does
+                    // firearmController.SetTriggerPressed(pressed);
+                    // -------------------------------------
+
+                    var currentOperation = PatchConstants.GetFieldOrPropertyFromInstance<object>(firearmController, "CurrentOperation", false);
+                    if (currentOperation != null) 
+                    {
+                        var setTriggerPressedMethod = PatchConstants.GetMethodForType(currentOperation.GetType(), "SetTriggerPressed");
+                        if (setTriggerPressedMethod != null)
+                        {
+                            setTriggerPressedMethod.Invoke(currentOperation, new object[] { pressed });
+                        }
+                    }
                 }
             }
-            //ReceivedPackets.Add(packet);
-            //ReceivedPackets = ReceivedPackets.OrderBy(x => (float)x["t"]).ToList();
-            //for (var i = 0; i < ReceivedPackets.Count; i++)  
-            //{
-            //    Logger.LogInfo("Processing SetTriggerPressed");
-            //    var cPacket = ReceivedPackets[i];
-            //    if (cPacket["m"].ToString() != "SetTriggerPressed")
-            //        continue;
-            //    var firearmController = GetFirearmController(player);
-            //    if (firearmController != null)
-            //    {
-            //        firearmController.SetTriggerPressed(bool.Parse(cPacket["pressed"].ToString()));
-            //    }
-            //}
-            //ReceivedPackets.Clear();
-
         }
     }
 }
