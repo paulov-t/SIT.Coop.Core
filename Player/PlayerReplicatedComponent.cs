@@ -149,7 +149,9 @@ namespace SIT.Coop.Core.Player
                             PatchConstants.Logger.LogInfo("Host Died");
                             LocalGameEndingPatch.EndSession(LocalGamePatches.LocalGameInstance, LocalGamePatches.MyPlayerProfile.Id, EFT.ExitStatus.Survived, "", 0);
                             break;
-                        
+                        case "Jump":
+                            PlayerOnJumpPatch.Replicated(player, packet);
+                            break;
                         case "Move":
                             if(LastMovementPacket == null 
                                 || int.Parse(packet["seq"].ToString()) > int.Parse(LastMovementPacket["seq"].ToString())

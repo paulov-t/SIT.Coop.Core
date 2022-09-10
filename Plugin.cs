@@ -41,6 +41,7 @@ namespace SIT.Coop.Core
             new PlayerOnGesturePatch().Enable();
             new PlayerOnHealPatch().Enable();
             new PlayerOnInventoryOpenedPatch().Enable();
+            new PlayerOnJumpPatch().Enable();
             new PlayerOnMovePatch().Enable();
             new PlayerOnSayPatch().Enable();
             new PlayerOnSetItemInHandsPatch().Enable();
