@@ -13,6 +13,7 @@ namespace SIT.Coop.Core.Player
 {
     internal class PlayerOnInteractWithDoorPatch : ModulePatch
     {
+
         /// <summary>
         /// Targetting vmethod_1
         /// </summary>
@@ -33,11 +34,17 @@ namespace SIT.Coop.Core.Player
             return method;
         }
 
+        [PatchPrefix]
+        public static bool PrePatch()
+        {
+            return Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer;
+        }
+
         [PatchPostfix]
         public static void Patch(
             EFT.Player __instance,
             WorldInteractiveObject door
-            , object interactionResult)
+            , InteractionResult interactionResult)
         {
             if (Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer)
                 return;
@@ -45,21 +52,35 @@ namespace SIT.Coop.Core.Player
             Logger.LogInfo("OnInteractWithDoorPatch.PatchPostfix");
             Dictionary<string, object> dictionary = new Dictionary<string, object>();
             dictionary.Add("doorId", door.Id);
-            //    PatchConstants.GetFieldOrPropertyFromInstance<object>(door, "Id", false));
-            //dictionary.Add("interactionResult", Enum.Parse(typeof(EInteractionType),
-            //    PatchConstants.GetFieldOrPropertyFromInstance<string>(interactionResult, "InteractionType", false)).ToString());
+            dictionary.Add("type", interactionResult.InteractionType.ToString());
             dictionary.Add("m", "Door");
             ServerCommunication.PostLocalPlayerData(__instance, dictionary);
             //Logger.LogInfo("OnInteractWithDoorPatch.PatchPostfix:Sent");
         }
 
 
-        [PatchPostfix]
         public static void Replicated(
-            object __instance,
-            object door
-            , object interactionResult)
+            EFT.Player player,
+            Dictionary<string, object> packet)
         {
+            var comp = player.GetComponent<PlayerReplicatedComponent>();
+            if(comp == null)
+            {
+                return;
+            }
+
+            Enum.TryParse<EInteractionType>(packet["type"].ToString(), out EInteractionType interactionType);
+
+            var foundDoor = comp.ListOfInteractiveObjects
+                .FirstOrDefault(
+                x => x.Id == packet["doorId"].ToString());
+            if(foundDoor == null)
+            {
+                return;
+            }
+
+            foundDoor.Interact(new InteractionResult(interactionType));
+
         }
     }
 }

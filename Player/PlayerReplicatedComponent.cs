@@ -69,14 +69,15 @@ namespace SIT.Coop.Core.Player
             //    //PatchConstants.Logger.LogInfo("NetworkClient is not connected!!");
             //}
 
-            if (this.listOfInteractiveObjects == null)
+            if (this.ListOfInteractiveObjects == null)
             {
-                this.listOfInteractiveObjects = FindObjectsOfType<WorldInteractiveObject>();
+                this.ListOfInteractiveObjects = FindObjectsOfType<WorldInteractiveObject>();
+                PatchConstants.Logger.LogInfo($"Found {ListOfInteractiveObjects.Length} interactive objects");
             }
         }
 
 
-        private WorldInteractiveObject[] listOfInteractiveObjects;
+        public WorldInteractiveObject[] ListOfInteractiveObjects { get; private set; }
 
         private Vector3 ReceivedPacketPostion = Vector3.zero;
         private Vector2 ReceivedPacketRotation = Vector2.zero;
@@ -134,10 +135,10 @@ namespace SIT.Coop.Core.Player
                             PatchConstants.Logger.LogInfo("Dead");
                             break;
                         case "Door":
-                            PatchConstants.Logger.LogInfo("Door");
+                            PlayerOnInteractWithDoorPatch.Replicated(player, packet);
                             break;
                         case "DropBackpack":
-                            PatchConstants.Logger.LogInfo("Door");
+                            PlayerOnDropBackpackPatch.Replicated(player, packet);
                             break;
                         case "EnableSprint":
                             PlayerOnEnableSprintPatch.Replicated(player, packet);
