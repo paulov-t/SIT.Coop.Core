@@ -32,11 +32,11 @@ namespace SIT.Coop.Core.Player
             return method;
         }
 
-        //[PatchPrefix]
-        //public static void PatchPrefix(object gesture)
-        //{
-        //    Logger.LogInfo("OnGesturePatch.PatchPrefix");
-        //}
+        [PatchPrefix]
+        public static bool PrePatch()
+        {
+            return Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer;
+        }
 
         public static ConcurrentDictionary<EFT.Player, bool> LastOpenedValue = new ConcurrentDictionary<EFT.Player, bool>();
 
@@ -52,6 +52,8 @@ namespace SIT.Coop.Core.Player
                 //Logger.LogInfo("PlayerOnInventoryOpenedPatch.PatchPostfix");
                 Dictionary<string, object> dictionary = new Dictionary<string, object>();
                 dictionary.Add("opened", opened);
+                if(!opened)
+                    dictionary.Add("p.equip", __instance.Inventory.Equipment.SITToJson());
                 dictionary.Add("m", "InventoryOpened");
                 ServerCommunication.PostLocalPlayerData(__instance, dictionary);
                 //Logger.LogInfo("PlayerOnInventoryOpenedPatch.PatchPostfix:Sent");
@@ -61,10 +63,23 @@ namespace SIT.Coop.Core.Player
 
         }
 
-        internal static void InventoryOpenedReplicated(LocalPlayer player, Dictionary<string, object> dictionary)
+        internal static void Replicated(LocalPlayer player, Dictionary<string, object> packet)
         {
             //Logger.LogInfo("InventoryOpened");
-            player.SetInventoryOpened(bool.Parse(dictionary["opened"].ToString()));
+            var opened = bool.Parse(packet["opened"].ToString());
+            player.SetInventoryOpened(opened);
+            //player.InventoryOpenRaiseAction(opened);
+            //if (player.HandsController != null)
+            //{
+            //    player.HandsController.SetInventoryOpened(opened);
+            //}
+
+            //if (!opened && packet.ContainsKey("p.equip"))
+            //{
+            //    var newEquipment = PatchConstants.SITParseJson<Equipment>(packet["p.equip"].ToString());
+            //    player.Inventory.Equipment = newEquipment;
+            //}
+
         }
     }
 }
