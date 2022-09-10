@@ -23,4 +23,8 @@ namespace SIT.Coop.Core.Player
 
         public abstract void ProcessPacket(EFT.Player player, Dictionary<string, object> packet);
     }
+
+    public interface IReplicatedPlayerProcessor
+    {
+    }
 }

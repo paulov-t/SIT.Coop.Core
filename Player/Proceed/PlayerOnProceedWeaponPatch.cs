@@ -26,6 +26,12 @@ namespace SIT.Coop.Core.Player
             return method;
         }
 
+        [PatchPrefix]
+        public static bool PrePatch()
+        {
+            return Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer;
+        }
+
         [PatchPostfix]
         public static void Patch(EFT.Player __instance, EFT.InventoryLogic.Weapon weapon)
         {
@@ -36,6 +42,8 @@ namespace SIT.Coop.Core.Player
 
             Dictionary<string, object> args = new Dictionary<string, object>();
             args.Add("m", "Proceed");
+            args.Add("item.id", weapon.Id);
+            args.Add("item.tpl", weapon.TemplateId);
             args.Add("pType", "Weapon");
             if (__instance.Profile.Inventory.Equipment.GetSlot(EFT.InventoryLogic.EquipmentSlot.FirstPrimaryWeapon).ContainedItem.Id == weapon.Id)
                 args.Add("slot", "FirstPrimaryWeapon");
@@ -50,14 +58,18 @@ namespace SIT.Coop.Core.Player
 
         }
 
-        public static void Replicated(EFT.Player player, Dictionary<string, object> args)
+        public static void ProceedWeaponReplicated(EFT.Player player, Dictionary<string, object> packet)
         {
-            if (player == null || !args.ContainsKey("slot"))
+            if (player == null)
                 return;
 
-
-            Logger.LogInfo($"PlayerOnProceedWeaponPatch:Replicated:{player.Profile.Nickname}");
-
+            var item = player.Profile.Inventory.GetAllItemByTemplate(packet["item.tpl"].ToString()).FirstOrDefault();
+            if (item != null)
+            {
+                PatchConstants.Logger.LogInfo($"ProceedWeaponReplicated: Attempting to set item of tpl {packet["item.tpl"].ToString()}");
+                if (item is EFT.InventoryLogic.Weapon weapon)
+                    player.Proceed(weapon, null, false);
+            }
 
         }
     }

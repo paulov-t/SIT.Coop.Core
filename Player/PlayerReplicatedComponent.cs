@@ -123,12 +123,11 @@ namespace SIT.Coop.Core.Player
 
                     switch (method)
                     {
-                        case "HostDied":
-                            PatchConstants.Logger.LogInfo("Host Died");
-                            LocalGameEndingPatch.EndSession(LocalGamePatches.LocalGameInstance, LocalGamePatches.MyPlayerProfile.Id, EFT.ExitStatus.Survived, "", 0);
+
+                        case "ApplyCorpseImpulse":
+                            PlayerOnApplyCorpseImpulsePatch.Replicated(player, packet);
                             break;
                         case "Damage":
-                            //PatchConstants.Logger.LogInfo("Damage");
                             PlayerOnDamagePatch.DamageReplicated(player, packet);
                             break;
                         case "Dead":
@@ -137,6 +136,20 @@ namespace SIT.Coop.Core.Player
                         case "Door":
                             PatchConstants.Logger.LogInfo("Door");
                             break;
+                        case "DropBackpack":
+                            PatchConstants.Logger.LogInfo("Door");
+                            break;
+                        case "EnableSprint":
+                            PlayerOnEnableSprintPatch.Replicated(player, packet);
+                            break;
+                        case "Gesture":
+                            PlayerOnGesturePatch.Replicated(player, packet);
+                            break;
+                        case "HostDied":
+                            PatchConstants.Logger.LogInfo("Host Died");
+                            LocalGameEndingPatch.EndSession(LocalGamePatches.LocalGameInstance, LocalGamePatches.MyPlayerProfile.Id, EFT.ExitStatus.Survived, "", 0);
+                            break;
+                        
                         case "Move":
                             if(LastMovementPacket == null 
                                 || int.Parse(packet["seq"].ToString()) > int.Parse(LastMovementPacket["seq"].ToString())
@@ -161,33 +174,18 @@ namespace SIT.Coop.Core.Player
                                 ReceivedPacketRotation = new Vector2(rotationX, rotationY);
                             }
                             break;
-                        //case "RotateBatch":
-                        //    var rotationBatch = Json.Deserialize<List<Vector2>>(Json.Serialize(packet["batch"]));
-                        //    foreach (var r in rotationBatch) 
-                        //    {
-                        //        if (r.IsZero() || r.SqrMagnitude() < 0.1f)
-                        //            continue;
-
-                        //        ReceivedRotationPackets.Enqueue(r);
-                        //    }
-                        //    break;
-                        //case "Rotate":
-                        //    //PatchConstants.Logger.LogInfo("Rotate");
-                        //    PlayerOnRotatePatch.RotateReplicated(player, packet);
-                        //    //LastRotationPacket = packet;
-                        //    break;
                         case "Say":
                             PlayerOnSayPatch.SayReplicated(player, packet);
                             break;
                         case "SetTriggerPressed":
                             //PatchConstants.Logger.LogInfo("SetTriggerPressed");
-                            WeaponOnTriggerPressedPatch.WeaponOnTriggerPressedReplicated(player, packet);
+                            WeaponOnTriggerPressedPatch.Replicated(player, packet);
                             break;
                         case "SetItemInHands":
                             PlayerOnSetItemInHandsPatch.SetItemInHandsReplicated(player, packet);
                             break;
                         case "InventoryOpened":
-                            PlayerOnInventoryOpenedPatch.InventoryOpenedReplicated(player, packet);
+                            PlayerOnInventoryOpenedPatch.Replicated(player, packet);
                             break;
                         case "Tilt":
                             //PlayerOnTiltPatch.TiltReplicated(player, packet);
@@ -196,6 +194,10 @@ namespace SIT.Coop.Core.Player
                             switch(packet["pType"].ToString())
                             {
                                 case "Weapon":
+                                    //PlayerOnProceedWeaponPatch.ProceedWeaponReplicated(player, packet);
+                                    break;
+                                case "Knife":
+                                    PlayerOnProceedKnifePatch.ProceedWeaponReplicated(player, packet);
                                     break;
                                 case "Meds":
                                     break;

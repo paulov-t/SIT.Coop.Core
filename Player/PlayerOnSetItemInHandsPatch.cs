@@ -28,36 +28,52 @@ namespace SIT.Coop.Core.Player
             return method;
         }
 
+        [PatchPrefix]
+        public static bool PrePatch()
+        {
+            return Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer;
+        }
+
         [PatchPostfix]
         public static void Patch(EFT.Player __instance, Item item)
         {
+            if (Matchmaker.MatchmakerAcceptPatches.IsSinglePlayer )
+                return;
+
+            if (item == null)
+                return;
+
             Dictionary<string, object> dictionary = new Dictionary<string, object>();
             dictionary.Add("item.id", item.Id);
             dictionary.Add("item.tpl", item.TemplateId);
             dictionary.Add("m", "SetItemInHands");
             ServerCommunication.PostLocalPlayerData(__instance, dictionary);
+
         }
 
         internal static void SetItemInHandsReplicated(LocalPlayer player, Dictionary<string, object> packet)
         {
+            PlayerOnTryProceedPatch.Replicated(player, packet);
 
-            var item = player.Profile.Inventory.GetAllItemByTemplate(packet["item.tpl"].ToString()).FirstOrDefault();
-            if(item != null)
-            {
-                PatchConstants.Logger.LogInfo($"SetItemInHandsReplicated: Attempting to set item of tpl {packet["item.tpl"].ToString()}");
-                //player.TryProceed(item, delegate(Result<IHandsController> result) { 
-                
-                //    if(result.Succeed)
-                //        PatchConstants.Logger.LogInfo($"SetItemInHandsReplicated: Result:Succeed");
-                //    else if (result.Failed)
-                //        PatchConstants.Logger.LogInfo($"SetItemInHandsReplicated: Result:Failed");
+            //var item = player.Profile.Inventory.GetAllItemByTemplate(packet["item.tpl"].ToString()).FirstOrDefault();
+            //if(item != null)
+            //{
+            //    PatchConstants.Logger.LogInfo($"SetItemInHandsReplicated: Attempting to set item of tpl {packet["item.tpl"].ToString()}");
+               
+            //    if (item is EFT.InventoryLogic.Weapon weapon)
+            //        player.Proceed(weapon, null, false);
 
-                //});
-            }
-            else
-            {
-                PatchConstants.Logger.LogError($"SetItemInHandsReplicated: Could not find item of tpl {packet["item.tpl"].ToString()}");
-            }
+            //    // Knife wont work?! Needs some weird casting
+            //    //if (item is EFT.InventoryLogic.KnifeComponent knife)
+            //    //    player.Proceed(weapon, null, false);
+
+            //    if (item is CurUsingMeds meds)
+            //        player.Proceed(meds, EBodyPart.Common, null, 0, false);
+            //}
+            //else
+            //{
+            //    PatchConstants.Logger.LogError($"SetItemInHandsReplicated: Could not find item of tpl {packet["item.tpl"].ToString()}");
+            //}
 
         }
     }
