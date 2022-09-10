@@ -14,6 +14,7 @@ using UnityEngine;
 using static SIT.Coop.Core.LocalGame.LocalGamePatches;
 using SIT.Coop.Core.Player;
 using System.Threading;
+using EFT.UI.Matchmaker;
 
 namespace SIT.Coop.Core.LocalGame
 {
@@ -48,12 +49,34 @@ namespace SIT.Coop.Core.LocalGame
 
         [PatchPostfix]
         public static async void PatchPostfix(
-            object __instance
+            EFT.BaseLocalGame<GamePlayerOwner> __instance
             , Vector3 position
             , Task<EFT.LocalPlayer> __result
             )
         {
             //Logger.LogInfo($"LocalGamePlayerSpawn:PatchPostfix");
+
+            //await Task.Run(async() =>
+            //{
+            //    // Wait for client to join 
+            //    // comment out to test general stuff
+            //    if (Matchmaker.MatchmakerAcceptPatches.IsServer)
+            //    {
+            //        if (CoopGameComponent.Players.Any())
+            //        {
+            //            var filteredPlayersOnlyCount = CoopGameComponent.Players.Count(x => !x.Value.IsAI);
+            //            while (filteredPlayersOnlyCount < Matchmaker.MatchmakerAcceptPatches.HostExpectedNumberOfPlayers)
+            //            {
+            //                filteredPlayersOnlyCount = CoopGameComponent.Players.Count(x => !x.Value.IsAI);
+            //                if (GlobalScreenController.CurrentScreenController is MatchmakerTimeHasCome.ScreenController screenController)
+            //                {
+            //                    screenController.ChangeStatus("Waiting for players", filteredPlayersOnlyCount / Matchmaker.MatchmakerAcceptPatches.HostExpectedNumberOfPlayers);
+            //                }
+            //                await Task.Delay(1000);
+            //            }
+            //        }
+            //    }
+            //});
 
             await __result.ContinueWith((x) =>
             {

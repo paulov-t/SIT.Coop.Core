@@ -124,7 +124,8 @@ namespace SIT.Coop.Core.LocalGame
 
                 // Wait for client to join 
                 // comment out to test general stuff
-                if (Matchmaker.MatchmakerAcceptPatches.IsServer)
+                var waitForClients = _config.Bind("Server", "Wait for Clients", true).Value;
+                if (waitForClients && Matchmaker.MatchmakerAcceptPatches.IsServer)
                 {
                     if (CoopGameComponent.Players.Any())
                     {

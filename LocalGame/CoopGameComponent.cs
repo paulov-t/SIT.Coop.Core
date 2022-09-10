@@ -318,18 +318,11 @@ namespace SIT.Coop.Core.LocalGame
 					this.AccountsLoading.TryAdd(accountId, null);
 					Profile profile = LocalGamePatches.MyPlayerProfile.Clone();
 					profile.AccountId = accountId;
-					profile.Id = accountId;//  profileId;
+					profile.Id = accountId;
 					profile.Info.Nickname = "Dickhead " + Players.Count;
 					profile.Info.Side = isBot ? EPlayerSide.Savage : EPlayerSide.Usec;
 					if (parsedDict.ContainsKey("p.info"))
 					{
-						//var profileInfo =  JObject.Parse(parsedDict["p.info"].ToString());
-						//profile.Info.Nickname = profileInfo.Property("Nickname").Value.ToString();
-						//profile.Info.Side = (EPlayerSide)Enum.Parse(typeof(EPlayerSide), profileInfo.Property("Side").Value.ToString());
-						//if(profileInfo.ContainsKey("Voice"))
-						//                  {
-						//	profile.Info.Voice = profileInfo["Voice"].ToString();
-						//}
 						Logger.LogInfo("DataReceivedClient_PlayerBotSpawn:: Converting Profile data");
 						//profile.Info = parsedDict["p.info"].ToString().ParseJsonTo<ProfileData>(Array.Empty<JsonConverter>());
 						profile.Info = JsonConvert.DeserializeObject<ProfileInfo>(parsedDict["p.info"].ToString());// PatchConstants.SITParseJson<ProfileInfo>(parsedDict["p.info"].ToString());//.ParseJsonTo<ProfileData>(Array.Empty<JsonConverter>());
