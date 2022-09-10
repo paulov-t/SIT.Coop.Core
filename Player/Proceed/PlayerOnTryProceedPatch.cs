@@ -76,30 +76,26 @@ namespace SIT.Coop.Core.Player
                         }, false);
                         return;
                     }
-                    if (item is PotentialGrenade potentialGrenade)
+                    if (item is ThrowWeap potentialGrenade)
                     {
-                        PotentialGrenade throwWeap = potentialGrenade;
+                    ThrowWeap throwWeap = potentialGrenade;
                         player.Proceed(throwWeap, delegate (Result<GInterface104> result)
                         {
                             EFT.Player.smethod_0(result, null);
                         }, false);
                         return;
                     }
-                    if (item is CurUsingMeds curUsingMeds)
+                    if (item is Meds meds)
                     {
-                        CurUsingMeds meds = curUsingMeds;
                         player.Proceed(meds, EBodyPart.Common, null, item.GetRandomAnimationVariant(), false);
                         return;
                     }
-                    //if (item is GClass2165 gClass)
-                    //{
-                    //    GClass2165 foodDrink = gClass;
-                    //    this.Proceed(foodDrink, 1f, delegate (Result<GInterface107> result)
-                    //    {
-                    //        Player.smethod_0(result, CS$<> 8__locals0.completeCallback);
-                    //    }, item.GetRandomAnimationVariant(), scheduled);
-                    //    return;
-                    //}
+                if (item is FoodDrink foodDrink)
+                {
+                    FoodDrink foodDrink2 = foodDrink;
+                    player.Proceed(foodDrink2, 1f, null, item.GetRandomAnimationVariant(), false);
+                    return;
+                }
 
                 PlayerOnProceedKnifePatch.ProceedWeaponReplicated(player, packet);
                 //KnifeComponent itemComponent = item.GetItemComponent<KnifeComponent>();
