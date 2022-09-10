@@ -26,7 +26,6 @@ namespace SIT.Coop.Core
             new LocalGameStartingPatch(Config).Enable();
             new LocalGameEndingPatch(Config).Enable();
 
-
             // ------ SPAWN --------------------------
             new LocalGamePlayerSpawn().Enable();
 
@@ -34,26 +33,28 @@ namespace SIT.Coop.Core
             new PlayerOnInitPatch(Config).Enable();
 
             // ------ PLAYER -------------------------
+            new PlayerOnApplyCorpseImpulsePatch().Enable();
             new PlayerOnDamagePatch().Enable();
             new PlayerOnDeadPatch(Config).Enable();
             new PlayerOnDropBackpackPatch().Enable();
+            new PlayerOnEnableSprintPatch().Enable();
             new PlayerOnGesturePatch().Enable();
             new PlayerOnHealPatch().Enable();
             new PlayerOnInventoryOpenedPatch().Enable();
             new PlayerOnMovePatch().Enable();
             new PlayerOnSayPatch().Enable();
             new PlayerOnSetItemInHandsPatch().Enable();
-            // testing
-            new PlayerOnInteractWithDoorPatch().Enable();
-            new PlayerOnProceedWeaponPatch().Enable();
-            new PlayerOnSetInHandsWeaponPatch().Enable();
+            //new PlayerOnProceedWeaponPatch().Enable();
+            //new PlayerOnProceedKnifePatch().Enable();
+            new PlayerOnTryProceedPatch().Enable();
 
             // ------ WEAPON -------------------------
             new WeaponOnTriggerPressedPatch().Enable();
             new WeaponOnDropPatch().Enable();
 
 
-            
+            new PlayerOnInteractWithDoorPatch().Enable();
+
 
             // Plugin startup logic
             Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
