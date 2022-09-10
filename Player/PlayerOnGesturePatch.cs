@@ -26,16 +26,27 @@ namespace SIT.Coop.Core.Player
 
         [PatchPostfix]
         public static void PatchPostfix(
-            object __instance,
-            object gesture)
+            EFT.Player __instance,
+            EGesture gesture)
         {
-            Logger.LogInfo("OnGesturePatch.PatchPostfix");
+            //Logger.LogInfo("OnGesturePatch.PatchPostfix");
             Dictionary<string, object> dictionary = new Dictionary<string, object>();
-            dictionary.Add("gesture", gesture);
+            dictionary.Add("gesture", gesture.ToString());
             dictionary.Add("m", "Gesture");
             ServerCommunication.PostLocalPlayerData(__instance, dictionary);
-            Logger.LogInfo("OnGesturePatch.PatchPostfix:Sent");
+            //Logger.LogInfo("OnGesturePatch.PatchPostfix:Sent");
 
+        }
+
+        public static void Replicated(EFT.Player player, Dictionary<string, object> packet)
+        {
+            if (player == null)
+                return;
+
+            if (!player.HandsController.IsInInteractionStrictCheck() && Enum.TryParse<EGesture>(packet["gesture"].ToString(), out var g))
+            {
+                player.HandsController.ShowGesture(g);
+            }
         }
     }
 }
