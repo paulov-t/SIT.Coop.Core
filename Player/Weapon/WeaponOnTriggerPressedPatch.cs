@@ -67,6 +67,16 @@ namespace SIT.Coop.Core.Player.Weapon
             return null;
         }
 
+        public static object GetCurrentOperation(EFT.Player player)
+        {
+            var firearmController = GetFirearmController(player);
+            if (firearmController == null)
+                return null;
+
+            var currentOperation = PatchConstants.GetFieldOrPropertyFromInstance<object>(firearmController, "CurrentOperation", false);
+            return currentOperation;
+        }
+
         /// <summary>
         /// 
         /// </summary>

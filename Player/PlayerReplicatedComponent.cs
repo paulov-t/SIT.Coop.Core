@@ -169,6 +169,9 @@ namespace SIT.Coop.Core.Player
                                 ReceivedPacketPostion = newPos;
                             }
                             break;
+                        case "ReloadMag":
+                            WeaponOnReloadMagPatch.Replicated(player, packet);
+                            break;
                         case "Rotation":
                             if(!IsMyPlayer)
                             {

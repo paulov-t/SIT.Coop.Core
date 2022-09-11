@@ -40,21 +40,20 @@ namespace SIT.Coop.Core
             new PlayerOnEnableSprintPatch().Enable();
             new PlayerOnGesturePatch().Enable();
             new PlayerOnHealPatch().Enable();
+            new PlayerOnInteractWithDoorPatch().Enable();
             new PlayerOnInventoryOpenedPatch().Enable();
             new PlayerOnJumpPatch().Enable();
             new PlayerOnMovePatch().Enable();
             new PlayerOnSayPatch().Enable();
             new PlayerOnSetItemInHandsPatch().Enable();
-            //new PlayerOnProceedWeaponPatch().Enable();
-            //new PlayerOnProceedKnifePatch().Enable();
             new PlayerOnTryProceedPatch().Enable();
 
             // ------ WEAPON -------------------------
-            new WeaponOnTriggerPressedPatch().Enable();
             new WeaponOnDropPatch().Enable();
+            new WeaponOnTriggerPressedPatch().Enable();
+            new WeaponOnReloadMagPatch().Enable();
 
 
-            new PlayerOnInteractWithDoorPatch().Enable();
 
 
             // Plugin startup logic
