@@ -122,10 +122,10 @@ namespace SIT.Coop.Core.LocalGame
                 {
                     //__instance.callback_0(new Result<ExitStatus, TimeSpan, Metrics>(exitStatus, GClass1150.Now - this.dateTime_0, new Metrics()));
                     var callback_0 = PatchConstants.GetFieldOrPropertyFromInstance
-                                <Callback<ExitStatus, TimeSpan, Metrics>>(game, "callback_0", false);
+                                <Callback<ExitStatus, TimeSpan, MetricsClass>>(game, "callback_0", false);
                     if (callback_0 != null)
                     {
-                        callback_0(new Result<ExitStatus, TimeSpan, Metrics>(exitStatus, new TimeSpan(), new Metrics()));
+                        callback_0(new Result<ExitStatus, TimeSpan, MetricsClass>(exitStatus, new TimeSpan(), new MetricsClass()));
                     }
                     UIEventSystem.Instance.Enable();
                 });

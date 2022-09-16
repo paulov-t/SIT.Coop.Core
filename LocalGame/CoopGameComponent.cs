@@ -433,7 +433,7 @@ namespace SIT.Coop.Core.LocalGame
 						, PatchConstants.CharacterControllerSettings.ClientPlayerMode
 						, () => 1f
 						, () => 1f
-						, (IGStatisticsSession2)Activator.CreateInstance(PatchConstants.TypeDictionary["StatisticsSession"])
+						, (IGStatisticsSession)Activator.CreateInstance(PatchConstants.TypeDictionary["StatisticsSession"])
 						, GFilterCustomization1.Default
 						, null
 						, false
@@ -543,7 +543,7 @@ namespace SIT.Coop.Core.LocalGame
 								PoolManager.PoolsCategory.Raid
 								, PoolManager.AssemblyType.Local
 								, allPrefabPaths.ToArray()
-								, GJobYield.General
+								, JobPriority.General
 								, new GProgress<SProgress>(delegate (SProgress p)
 							{
 								//this.QuickLog($"Update::Loading a new Player {newPlayerToSpawn.Item1.Nickname}:{p.Stage}:{p.Progress}");
