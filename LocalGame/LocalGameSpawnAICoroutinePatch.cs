@@ -27,7 +27,7 @@ namespace SIT.Coop.Core.LocalGame
         private static ConfigFile _config;
         //private static MethodInfo MethodInfoBotCreation;
         private static int maxCountOfBots = 20;
-        private static LocationSettings.SelectedLocation LocationSettings;
+        private static LocationSettingsClass.SelectedLocation LocationSettings;
 
 
         public LocalGameSpawnAICoroutinePatch(ConfigFile config, BaseLocalGame<GamePlayerOwner> game)
@@ -46,9 +46,9 @@ namespace SIT.Coop.Core.LocalGame
 
             Logger.LogInfo("LocalGameSpawnAICoroutinePatch:Get Location Settings");
 
-            LocationSettings = (LocationSettings.SelectedLocation)PatchConstants.GetFieldFromTypeByFieldType(
+            LocationSettings = (LocationSettingsClass.SelectedLocation)PatchConstants.GetFieldFromTypeByFieldType(
                     gameType,
-                    typeof(LocationSettings.SelectedLocation)).GetValue(LocalGamePatches.LocalGameInstance);
+                    typeof(LocationSettingsClass.SelectedLocation)).GetValue(LocalGamePatches.LocalGameInstance);
 
         }
 
@@ -159,7 +159,7 @@ namespace SIT.Coop.Core.LocalGame
                     // Construct Profile Creator
                     var profileCreator = new BotPresetFactory1(PatchConstants.BackEndSession, ___wavesSpawnScenario_0.SpawnWaves, (BossLocationSpawn[])BossSpawnerWaves, null, false);
 
-                    BotCreator1 botCreator = new BotCreator1(__instance, profileCreator, BotCreationMethod);
+                    BotCreator botCreator = new BotCreator(__instance, profileCreator, BotCreationMethod);
 
                     BotZone[] botZones = LocationScene.GetAllObjects<BotZone>().ToArray();
                     bool enableWaveControl = true;
